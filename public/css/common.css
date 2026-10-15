@@ -1,0 +1,208 @@
+/* =========================================================
+   DESIGN SYSTEM · PREMIUM BROADCAST THEME
+   CricHeroes OBS Live Score Overlay
+   ========================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=Teko:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ── Surface & Background Palette ── */
+  --bg-void: #060a13;
+  --bg-deep: #0a0f1d;
+  --bg-primary: #0d1424;
+  --bg-secondary: #111a2e;
+  --bg-elevated: #162036;
+  --bg-surface: #1a2540;
+  --bg-hover: #1e2d4a;
+
+  /* Glass & Transparency */
+  --glass-dense: rgba(10, 15, 29, 0.92);
+  --glass-medium: rgba(13, 20, 36, 0.85);
+  --glass-light: rgba(22, 32, 54, 0.75);
+  --glass-subtle: rgba(26, 37, 64, 0.55);
+  --glass-overlay: rgba(6, 10, 19, 0.70);
+
+  /* ── Accent Colors ── */
+  --accent-primary: #3b82f6;
+  --accent-primary-soft: rgba(59, 130, 246, 0.15);
+  --accent-primary-glow: rgba(59, 130, 246, 0.35);
+
+  --accent-cyan: #06b6d4;
+  --accent-cyan-soft: rgba(6, 182, 212, 0.12);
+  --accent-cyan-glow: rgba(6, 182, 212, 0.30);
+
+  --accent-gold: #f59e0b;
+  --accent-gold-soft: rgba(245, 158, 11, 0.12);
+  --accent-gold-glow: rgba(245, 158, 11, 0.35);
+
+  --accent-red: #ef4444;
+  --accent-red-soft: rgba(239, 68, 68, 0.12);
+  --accent-red-glow: rgba(239, 68, 68, 0.35);
+
+  --accent-green: #10b981;
+  --accent-green-soft: rgba(16, 185, 129, 0.12);
+  --accent-green-glow: rgba(16, 185, 129, 0.35);
+
+  --accent-purple: #8b5cf6;
+  --accent-purple-soft: rgba(139, 92, 246, 0.12);
+  --accent-purple-glow: rgba(139, 92, 246, 0.35);
+
+  --accent-amber: #fbbf24;
+  --accent-orange: #f97316;
+
+  /* ── Text Hierarchy ── */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-muted: #475569;
+  --text-inverse: #0f172a;
+  --text-highlight: #fef08a;
+  --text-link: #60a5fa;
+
+  /* ── Borders ── */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-accent: rgba(6, 182, 212, 0.40);
+  --border-glow: rgba(59, 130, 246, 0.35);
+
+  /* ── Typography ── */
+  --font-display: 'Outfit', -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  --font-score: 'Teko', 'Impact', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
+
+  /* ── Radii ── */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.55), 0 8px 16px rgba(0, 0, 0, 0.4);
+  --shadow-glow-cyan: 0 0 20px rgba(6, 182, 212, 0.25), 0 0 40px rgba(6, 182, 212, 0.10);
+  --shadow-glow-gold: 0 0 20px rgba(245, 158, 11, 0.25), 0 0 40px rgba(245, 158, 11, 0.10);
+  --shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.25), 0 0 40px rgba(59, 130, 246, 0.10);
+  --shadow-glow-red: 0 0 20px rgba(239, 68, 68, 0.25), 0 0 40px rgba(239, 68, 68, 0.10);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* ── Transitions ── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+}
+
+/* ── Base Resets ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.20);
+}
+
+/* ── Utility Animations ── */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.65; transform: scale(0.96); }
+}
+
+@keyframes liveBlink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--accent-red-glow); }
+  50% { opacity: 0.25; box-shadow: none; }
+}
+
+@keyframes liveDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInBottom {
+  from { opacity: 0; transform: translateY(40px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes bannerSlideIn {
+  0% { transform: translate(-50%, -50%) translateY(60px) scale(0.92); opacity: 0; }
+  100% { transform: translate(-50%, -50%) translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes boundaryExplode {
+  0% { transform: translate(-50%, -50%) scale(0.5) rotate(-5deg); opacity: 0; }
+  60% { transform: translate(-50%, -50%) scale(1.06) rotate(1.5deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes shineSweep {
+  0% { transform: translateX(-150%) skewX(-25deg); }
+  100% { transform: translateX(350%) skewX(-25deg); }
+}
+
+@keyframes wicketShake {
+  0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+  15%, 45%, 75% { transform: translate(-50%, -50%) translateX(-8px); }
+  30%, 60%, 90% { transform: translate(-50%, -50%) translateX(8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.15); }
+  50% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.30); }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
