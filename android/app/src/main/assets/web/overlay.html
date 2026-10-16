@@ -1476,22 +1476,29 @@ async function pollScore() {
   const params = new URLSearchParams(location.search);
   const customServer = params.get('server') || localStorage.getItem('server_url');
 
-  const endpoints = ['/api/score', '/score'];
+  const endpoints = [];
   if (customServer) {
     const s = customServer.replace(/\/$/, "");
-    endpoints.unshift(`${s}/api/score`);
+    endpoints.push(`${s}/api/score`);
+    endpoints.push(`${s}/score`);
   }
+  endpoints.push('/api/score');
+  endpoints.push('/score');
   if (location.protocol === 'file:') {
-    endpoints.unshift('http://192.168.1.9:3000/api/score');
-    endpoints.unshift('http://localhost:3000/api/score');
+    endpoints.push('http://localhost:3000/api/score');
+    endpoints.push('http://192.168.1.9:3000/api/score');
   }
 
   for (const url of endpoints) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
       const r = await fetch(url, {
         cache: "no-store",
+        signal: controller.signal,
         headers: { "ngrok-skip-browser-warning": "true" }
       });
+      clearTimeout(timeoutId);
       if (r.ok) {
         const d = await r.json();
         render(d);

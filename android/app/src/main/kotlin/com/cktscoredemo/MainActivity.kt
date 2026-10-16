@@ -13,10 +13,12 @@ import org.json.JSONObject
 import org.json.JSONTokener
 import android.view.ViewGroup
 import android.content.ClipboardManager
+import android.net.http.SslError
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
+import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -431,6 +433,15 @@ fun CktAppScreen(
                                         errorMessage = error?.description?.toString() ?: "Failed to connect"
                                     }
                                 }
+
+                                @SuppressLint("WebViewClientOnReceivedSslError")
+                                override fun onReceivedSslError(
+                                    view: WebView?,
+                                    handler: SslErrorHandler?,
+                                    error: SslError?
+                                ) {
+                                    handler?.proceed()
+                                }
                             }
 
                             webViewRef = this
@@ -603,15 +614,27 @@ fun CktAppScreen(
                         var trimmed = inputUrlText.trim()
                         if (trimmed.isNotEmpty()) {
                             // Auto-heal missing schemes and ports
-                            if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://") && !trimmed.startsWith("file://")) {
-                                trimmed = if (trimmed.contains(".loca.lt") || trimmed.contains("ngrok") || trimmed.contains(".app") || trimmed.contains(".dev")) {
-                                    "https://$trimmed"
-                                } else {
-                                    "http://$trimmed"
-                                }
+                            if (!trimmed.startsWith("http://", ignoreCase = true) &&
+                                !trimmed.startsWith("https://", ignoreCase = true) &&
+                                !trimmed.startsWith("file://", ignoreCase = true)
+                            ) {
+                                val isLocalIp = trimmed.startsWith("192.168.") ||
+                                        trimmed.startsWith("10.") ||
+                                        trimmed.startsWith("172.") ||
+                                        trimmed.startsWith("127.") ||
+                                        trimmed.startsWith("localhost")
+                                trimmed = if (isLocalIp) "http://$trimmed" else "https://$trimmed"
                             }
+
+                            // Only auto-append :3000 for local private IPs and localhost when port is omitted
                             val hostPart = trimmed.substringAfter("://").substringBefore("/")
-                            if (!hostPart.contains(":") && !trimmed.contains(".loca.lt") && !trimmed.contains("ngrok") && !trimmed.startsWith("file://")) {
+                            val isLocalHost = hostPart.startsWith("192.168.") ||
+                                    hostPart.startsWith("10.") ||
+                                    hostPart.startsWith("172.") ||
+                                    hostPart.startsWith("127.") ||
+                                    hostPart.equals("localhost", ignoreCase = true)
+
+                            if (isLocalHost && !hostPart.contains(":") && !trimmed.startsWith("file://")) {
                                 val pathPart = trimmed.substringAfter("://").substringAfter("/", "")
                                 trimmed = if (pathPart.isNotEmpty()) {
                                     trimmed.substringBefore("://") + "://" + hostPart + ":3000/" + pathPart
@@ -932,7 +955,16 @@ fun CameraStreamOverlayScreen(
                             request?.grant(request.resources)
                         }
                     }
-                    webViewClient = WebViewClient()
+                    webViewClient = object : WebViewClient() {
+                        @SuppressLint("WebViewClientOnReceivedSslError")
+                        override fun onReceivedSslError(
+                            view: WebView?,
+                            handler: SslErrorHandler?,
+                            error: SslError?
+                        ) {
+                            handler?.proceed()
+                        }
+                    }
                     loadUrl(overlayUrl)
                 }
             }

@@ -659,7 +659,7 @@ startAutoSync();
 scheduleStaleCheck();
 
 const server = http.createServer(app);
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`=======================================================`);
   console.log(`🏏 Live Cricket Scorecard Overlay Server Running!`);
   console.log(`📺 Overlay URL for OBS: http://localhost:${PORT}/overlay.html`);
