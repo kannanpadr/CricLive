@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Large Archives & Binaries
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+*.apk
+*.aab
+*.jar
+!android/gradle/wrapper/gradle-wrapper.jar
+
+# JDKs and Tools
+jdk*
+jdk*/
+gradle-*/
+gradle-*
+
+# Android & Gradle Build Artifacts
+.gradle/
+*/.gradle/
+build/
+*/build/
+app/build/
+android/app/build/
+android/build/
+.cxx/
+local.properties
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

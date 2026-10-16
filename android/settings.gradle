@@ -1,0 +1,3 @@
+// Top-level settings for the Android project
+rootProject.name = "CKTScoreDemo"
+include ":app"

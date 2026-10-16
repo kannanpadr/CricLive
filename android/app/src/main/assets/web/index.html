@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CricHeroes Overlay — Live Score Control Panel</title>
+  <style>
+    :root {
+      --bg: #061226;
+      --panel: #0b1b32;
+      --panel2: #10243f;
+      --line: #1d3b5e;
+      --text: #f3f7ff;
+      --muted: #a6bad4;
+      --blue: #087cff;
+      --blue2: #00c7ff;
+      --gold: #ffc107;
+      --green: #00e59b;
+      --red: #ff4e61;
+      --shadow: 0 16px 40px #0005
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(ellipse at 70% -20%, #153e70 0, transparent 40%), var(--bg);
+      color: var(--text);
+      font: 14px/1.45 Inter, Segoe UI, Arial, sans-serif
+    }
+
+    button,
+    input,
+    select {
+      font: inherit
+    }
+
+    button {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 14px;
+      background: #102641;
+      color: var(--text);
+      transition: .18s
+    }
+
+    button:hover {
+      filter: brightness(1.18)
+    }
+
+    button.primary {
+      background: linear-gradient(120deg, #087cff, #005be7);
+      border-color: #248bff
+    }
+
+    button.danger {
+      background: #5b1725;
+      border-color: #a92c43
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: 1px solid #2b496d;
+      border-radius: 8px;
+      padding: 10px 11px;
+      background: #0a1a30;
+      color: var(--text);
+      outline: none
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--blue2)
+    }
+
+    label {
+      display: block;
+      color: #c2d2e7;
+      font-size: 12px;
+      margin: 0 0 6px
+    }
+
+    .appbar {
+      height: 70px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      background: #071529eF;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      gap: 18px
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -.4px
+    }
+
+    .ball {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #ff5252, #b30f32);
+      box-shadow: 0 0 24px #ff294044;
+      font-size: 20px
+    }
+
+    .brand small {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+      letter-spacing: .1px
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: wrap
+    }
+
+    .connection {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #91ffe0;
+      font-size: 12px;
+      margin-right: 12px
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px #00e59b
+    }
+
+    .dot.stale {
+      background: var(--gold);
+      box-shadow: 0 0 12px #ffc107
+    }
+
+    .dot.offline {
+      background: var(--red);
+      box-shadow: 0 0 12px #ff4e61
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 210px minmax(0, 1fr);
+      min-height: calc(100vh - 70px)
+    }
+
+    aside {
+      padding: 18px 12px;
+      border-right: 1px solid var(--line);
+      background: #061426
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      color: #c4d4e9;
+      padding: 12px;
+      border-radius: 9px;
+      margin: 3px 0
+    }
+
+    .nav.active {
+      background: linear-gradient(100deg, #075ad0, #103c83);
+      color: #fff
+    }
+
+    .nav .ico {
+      width: 20px;
+      text-align: center;
+      font-size: 17px
+    }
+
+    .aside-bottom {
+      margin-top: 32px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      color: #b9cce3;
+      font-size: 12px
+    }
+
+    .main {
+      padding: 18px;
+      min-width: 0;
+      max-width: 1800px;
+      width: 100%;
+      margin: auto
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(320px, .95fr);
+      gap: 14px
+    }
+
+    .stack {
+      display: grid;
+      gap: 14px;
+      align-content: start
+    }
+
+    .card {
+      border: 1px solid #1b3657;
+      background: linear-gradient(145deg, #0b1c33f7, #08172bfa);
+      border-radius: 13px;
+      box-shadow: var(--shadow);
+      overflow: hidden
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 15px 17px 10px
+    }
+
+    .card-head h2,
+    .card-head h3 {
+      font-size: 15px;
+      margin: 0;
+      font-weight: 750
+    }
+
+    .card-body {
+      padding: 0 17px 16px
+    }
+
+    .muted {
+      color: var(--muted)
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 30px;
+      background: #063d35;
+      border: 1px solid #0c6c55;
+      color: #70ffd4;
+      font-size: 11px;
+      padding: 5px 12px;
+      font-weight: 750
+    }
+
+    .pill.warning {
+      background: #3d3006;
+      border-color: #6c580c;
+      color: #ffe470
+    }
+
+    .pill.danger {
+      background: #3d0606;
+      border-color: #6c0c0c;
+      color: #ff8a8a
+    }
+
+    .live-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap
+    }
+
+    .match-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      align-items: center;
+      margin: 2px 0 16px
+    }
+
+    .trophy {
+      font-size: 28px
+    }
+
+    .match-name {
+      font-size: 18px;
+      font-weight: 850;
+      color: var(--gold)
+    }
+
+    .venue {
+      font-size: 12px;
+      color: #c4d5eb
+    }
+
+    .date {
+      text-align: right;
+      color: #dbe7f7;
+      font-size: 12px;
+      border-left: 1px solid var(--line);
+      padding-left: 14px
+    }
+
+    .score-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: stretch;
+      border-radius: 12px;
+      overflow: hidden;
+      min-height: 88px;
+      border: 1px solid #087cff;
+      box-shadow: 0 0 22px #087cff24
+    }
+
+    .team {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 15px;
+      background: linear-gradient(115deg, #087cff, #06306d);
+      min-width: 0
+    }
+
+    .team.right {
+      justify-content: flex-end;
+      text-align: right;
+      background: linear-gradient(115deg, #583700, #a66a00);
+      border-left: 2px solid var(--gold)
+    }
+
+    .team .animal {
+      font-size: 27px
+    }
+
+    .team strong {
+      font-size: 14px;
+      line-height: 1.2
+    }
+
+    .center-score {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      background: #08172b;
+      text-align: center;
+      border-left: 1px solid #1a4264;
+      border-right: 1px solid #74571a
+    }
+
+    .score {
+      font-size: 34px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: -1.4px
+    }
+
+    .overs {
+      font-size: 13px;
+      color: #57dfff;
+      font-weight: 750;
+      margin-top: 5px
+    }
+
+    .stats {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-top: 12px;
+      border: 1px solid #203e60;
+      border-radius: 10px;
+      overflow: hidden
+    }
+
+    .stat {
+      flex: 1;
+      text-align: center;
+      padding: 12px 7px;
+      background: #08182c;
+      min-width: 80px;
+      border-right: 1px solid #183350
+    }
+
+    .stat span {
+      display: block;
+      font-size: 10px;
+      color: #c4d5e9
+    }
+
+    .stat b {
+      display: block;
+      font-size: 19px;
+      margin-top: 2px
+    }
+
+    .chase {
+      flex: 1.75;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(120deg, #533500, #271b08);
+      border-left: 1px solid #a77918;
+      padding: 10px;
+      text-align: center;
+      font-weight: 700;
+      color: #ffe28b
+    }
+
+    .chase span {
+      display: block;
+      color: white;
+      font-weight: 500
+    }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px
+    }
+
+    .form-row {
+      margin-bottom: 12px
+    }
+
+    .form-inline {
+      display: grid;
+      grid-template-columns: 1fr 125px;
+      gap: 10px
+    }
+
+    .btnrow {
+      display: flex;
+      gap: 9px;
+      margin-top: 14px
+    }
+
+    .btnrow>* {
+      flex: 1
+    }
+
+    .status-list {
+      display: grid;
+      gap: 0
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #19324f;
+      font-size: 12px
+    }
+
+    .status-row:last-child {
+      border: 0
+    }
+
+    .status-row b {
+      font-weight: 600;
+      text-align: right
+    }
+
+    .good {
+      color: #52ffd0
+    }
+
+    .quick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px
+    }
+
+    .quick-grid button {
+      font-size: 12px;
+      padding: 11px 8px
+    }
+
+    .lower-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(250px, .8fr);
+      gap: 14px;
+      margin-top: 14px
+    }
+
+    .design-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px
+    }
+
+    .field {
+      margin-bottom: 12px
+    }
+
+    .swatch {
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    .swatch input[type=color] {
+      width: 36px;
+      height: 36px;
+      padding: 3px;
+      flex: 0 0 36px
+    }
+
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #18314e;
+      font-size: 12px
+    }
+
+    .toggle-row:last-child {
+      border: 0
+    }
+
+    .switch {
+      appearance: none;
+      width: 34px;
+      height: 19px;
+      border-radius: 20px;
+      background: #354b65;
+      position: relative;
+      cursor: pointer;
+      flex: 0 0 34px;
+      padding: 0;
+      border: 0
+    }
+
+    .switch:before {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 13px;
+      height: 13px;
+      background: white;
+      border-radius: 50%;
+      transition: .18s
+    }
+
+    .switch:checked {
+      background: #087cff
+    }
+
+    .switch:checked:before {
+      left: 18px
+    }
+
+    .range-row {
+      display: flex;
+      gap: 12px;
+      align-items: center
+    }
+
+    .range-row input {
+      padding: 0;
+      accent-color: var(--blue);
+      border: 0
+    }
+
+    .preview-checker {
+      background-color: #c9cdd3;
+      background-image: linear-gradient(45deg, #aeb4bd 25%, transparent 25%), linear-gradient(-45deg, #aeb4bd 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #aeb4bd 75%), linear-gradient(-45deg, transparent 75%, #aeb4bd 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+      min-height: 165px;
+      padding: 27px 10px;
+      display: flex;
+      align-items: center;
+      border-radius: 10px;
+      overflow: hidden
+    }
+
+    .mini-score {
+      width: 100%;
+      font-size: 10px;
+      filter: drop-shadow(0 5px 8px #0004)
+    }
+
+    .mini-top {
+      display: grid;
+      grid-template-columns: 1fr .8fr 1fr;
+      align-items: center;
+      border: 1px solid #168cff;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #07172c
+    }
+
+    .mini-team {
+      padding: 10px 8px;
+      color: white;
+      background: linear-gradient(110deg, #087cff, #062e68);
+      font-weight: 850
+    }
+
+    .mini-team:last-child {
+      text-align: right;
+      background: linear-gradient(110deg, #543500, #b47b00)
+    }
+
+    .mini-big {
+      text-align: center;
+      font-size: 25px;
+      font-weight: 900;
+      padding: 5px;
+      background: #07172c
+    }
+
+    .mini-ov {
+      display: block;
+      font-size: 10px;
+      color: #62e6ff
+    }
+
+    .mini-bottom {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 7px;
+      background: #07172c;
+      border: 1px solid #17446c;
+      color: white;
+      padding: 10px;
+      margin-top: 4px;
+      border-radius: 7px
+    }
+
+    .mini-bottom b {
+      display: block
+    }
+
+    .section-hidden {
+      display: none !important
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: #063e35;
+      border: 1px solid #0b8b68;
+      color: #b9ffec;
+      box-shadow: var(--shadow);
+      z-index: 20;
+      display: none;
+      font-weight: 600
+    }
+
+    .toast.warning {
+      background: #413106;
+      border-color: #94710b;
+      color: #ffe9a6
+    }
+
+    .toast.error {
+      background: #480d19;
+      border-color: #b5223e;
+      color: #ffcbd6
+    }
+
+    .footer-note {
+      font-size: 11px;
+      color: #9eb2cb;
+      margin-top: 12px
+    }
+
+    /* =========================================================
+       MOBILE & TABLET RESPONSIVE SYSTEM
+       ========================================================= */
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 160px minmax(0, 1fr);
+      }
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .lower-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 820px) {
+      body {
+        font-size: 13.5px;
+      }
+
+      .appbar {
+        height: auto;
+        min-height: 54px;
+        padding: 8px 12px;
+        gap: 8px;
+        flex-wrap: nowrap;
+      }
+
+      .brand {
+        gap: 8px;
+        font-size: 15px;
+        min-width: 0;
+      }
+
+      .brand .ball {
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+        flex-shrink: 0;
+      }
+
+      .brand small {
+        display: none;
+      }
+
+      .top-actions {
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .top-actions button {
+        padding: 6px 10px;
+        font-size: 11px;
+        border-radius: 8px;
+      }
+
+      .connection {
+        font-size: 11px;
+        margin-right: 4px;
+      }
+
+      .connection #connectionText {
+        display: none;
+      }
+
+      .layout {
+        display: flex;
+        flex-direction: column;
+        min-height: auto;
+      }
+
+      aside {
+        display: flex;
+        flex-direction: row;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 6px 8px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        background: #071529;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        gap: 6px;
+        scrollbar-width: none;
+      }
+
+      aside::-webkit-scrollbar {
+        display: none;
+      }
+
+      .nav {
+        white-space: nowrap;
+        width: auto;
+        flex-shrink: 0;
+        margin: 0;
+        padding: 7px 12px;
+        font-size: 12px;
+        border-radius: 8px;
+        background: #0c1c33;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .nav.active {
+        background: linear-gradient(100deg, #075ad0, #0088ff);
+        border-color: #248bff;
+      }
+
+      .aside-bottom {
+        display: none;
+      }
+
+      .main {
+        padding: 10px 8px;
+      }
+
+      .card {
+        border-radius: 10px;
+        margin-bottom: 10px;
+      }
+
+      .card-head {
+        padding: 12px 14px 8px;
+      }
+
+      .card-body {
+        padding: 0 14px 14px;
+      }
+
+      .score-strip {
+        padding: 8px;
+        gap: 6px;
+      }
+
+      .score {
+        font-size: 26px;
+      }
+
+      .overs {
+        font-size: 12px;
+      }
+
+      .team strong {
+        font-size: 12px;
+      }
+
+      .team .animal {
+        font-size: 20px;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      .stat {
+        padding: 8px;
+      }
+
+      .stat b {
+        font-size: 16px;
+      }
+
+      .chase {
+        grid-column: 1 / -1;
+      }
+
+      .design-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-inline {
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .btnrow {
+        flex-direction: column;
+      }
+
+      .btnrow button {
+        width: 100%;
+      }
+
+      .quick-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .appbar {
+        padding: 6px 8px;
+      }
+
+      .top-actions button.hide-small,
+      .top-actions button:not(.primary) {
+        display: none;
+      }
+
+      .score-strip {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "center center"
+          "left right";
+        text-align: center;
+        gap: 6px;
+      }
+
+      .center-score {
+        grid-area: center;
+        padding: 6px 0;
+      }
+
+      .team {
+        grid-area: left;
+        justify-content: flex-start;
+        padding: 6px;
+      }
+
+      .team.right {
+        grid-area: right;
+        justify-content: flex-end;
+        padding: 6px;
+      }
+
+      .team .animal {
+        display: none;
+      }
+
+      input, select, button {
+        font-size: 15px;
+      }
+
+      button {
+        padding: 10px 12px;
+      }
+
+      .quick-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+  <div id="appView">
+    <header class="appbar">
+      <div class="brand">
+        <div class="ball">🏏</div>
+        <div>CricHeroes Overlay<small>Live Score Control Panel</small></div>
+      </div>
+      <div class="top-actions">
+        <div class="connection"><span class="dot" id="headerDot"></span><span id="connectionText">Checking
+            connection...</span></div>
+        <button class="hide-small" onclick="openOverlay()">↗ Preview Overlay</button>
+        <button class="primary" onclick="copyOverlayUrl()">▣ Copy OBS URL</button>
+        <button onclick="saveSettings()">⚙ Save Settings</button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside>
+        <button class="nav active" data-page="dashboard">⌂ <span>Dashboard</span></button>
+        <button class="nav" data-page="match">↗ <span>Match Setup</span></button>
+        <button class="nav" data-page="design">◉ <span>Overlay Design</span></button>
+        <button class="nav" data-page="display">▣ <span>Display Options</span></button>
+        <button class="nav" data-page="data">▤ <span>Data & Logs</span></button>
+        <button class="nav" data-page="obs">▱ <span>OBS Integration</span></button>
+        <div class="aside-bottom">
+          <div class="good">● Overlay Preview Ready</div>
+          <div style="margin-top:5px">OBS Studio 1920×1080</div>
+          <div class="muted" style="margin-top:9px">Direct sync to CricHeroes live reader.</div>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="grid">
+          <div class="stack">
+            <section class="card">
+              <div class="card-head">
+                <div class="live-heading">
+                  <h2>Live Match Status</h2><span class="pill" id="inningsBadge">● 1st Innings</span><span class="pill"
+                    id="statusPill"><span class="dot" id="pillDot"></span><span
+                      id="matchStatus">INITIALIZING</span></span>
+                </div>
+                <span class="muted" style="font-size:11px" id="lastUpdated">Checking...</span>
+              </div>
+              <div class="card-body">
+                <div class="match-meta">
+                  <div style="display:flex;gap:12px;align-items:center">
+                    <div class="trophy">🏆</div>
+                    <div>
+                      <div class="match-name" id="matchTitleDisplay">RBCL UNDER-14</div>
+                      <div class="venue" id="venueDisplay">Bengaluru, Karnataka · RBCL Ground</div>
+                    </div>
+                  </div>
+                  <div class="date" id="dateDisplay">◷ Match Day<br>Live Score Sync</div>
+                </div>
+                <div class="score-strip">
+                  <div class="team"><span class="animal" id="leftLogo">🦁</span><strong
+                      id="battingTeam">BENGALURU<br>STRIKES</strong></div>
+                  <div class="center-score">
+                    <div class="score" id="scoreValue">128/3</div>
+                    <div class="overs" id="oversValue">(20.2 OV)</div>
+                  </div>
+                  <div class="team right"><strong id="bowlingTeam">BALLARI<br>FALCONS</strong><span class="animal"
+                      id="rightLogo">🦅</span></div>
+                </div>
+                <div class="stats" id="statsStrip">
+                  <div class="stat" id="statCrrCard"><span>CRR</span><b id="crrValue">6.29</b></div>
+                  <div class="stat" id="statProjectedCard"><span>PROJECTED</span><b id="projectedValue">182</b><span
+                      id="projSubText">(at 9.00 RPO)</span></div>
+                  <div class="stat" id="statTargetCard" style="display:none"><span>TARGET</span><b
+                      id="targetValue">—</b><span id="targetOvers">(20 OV)</span></div>
+                  <div class="chase" id="chaseCard" style="display:none">
+                    <div id="chaseText"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="card">
+              <div class="card-head">
+                <h3>◉ Overlay Preview</h3>
+                <div style="display:flex;gap:7px">
+                  <select id="previewLayout" style="width:auto;padding:7px">
+                    <option value="full">Main Scorebar (with players)</option>
+                    <option value="compact">Compact Scorebar</option>
+                  </select>
+                  <button onclick="openOverlay()">↗ Open</button>
+                </div>
+              </div>
+              <div class="preview-checker" id="previewMount"></div>
+            </section>
+          </div>
+
+          <div class="stack">
+            <section class="card" id="matchCard">
+              <div class="card-head">
+                <h3>↗ Match Configuration</h3><button onclick="loadSample()"
+                  style="padding:6px 10px;font-size:11px">Load Sample</button>
+              </div>
+              <div class="card-body">
+                <div class="form-row">
+                  <label for="matchUrl">CricHeroes Match URL</label>
+                  <div class="form-inline">
+                    <input id="matchUrl"
+                      value="https://cricheroes.com/scorecard/27649718/rising-bharat-cricket-league-rbcl-/kalaburagi-warriors-vs-kodagu-panthers/scorecard"
+                      placeholder="Paste live CricHeroes scorecard URL">
+                    <button title="Copy URL" onclick="copyText('matchUrl')">▢ Copy</button>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label for="refreshInterval">Auto Refresh Interval (seconds)</label>
+                  <select id="refreshInterval">
+                    <option value="2">2 seconds</option>
+                    <option value="4" selected>4 seconds</option>
+                    <option value="5">5 seconds</option>
+                    <option value="10">10 seconds</option>
+                    <option value="15">15 seconds</option>
+                  </select>
+                </div>
+                <div class="form-row"><label for="matchTitle">Match / Tournament Title</label><input id="matchTitle"
+                    value="RBCL UNDER-14"></div>
+                <div class="form-row"><label for="venue">Venue</label><input id="venue"
+                    value="Bengaluru, Karnataka · RBCL Ground"></div>
+                <div class="form-row">
+                  <label for="matchInnings">Match Innings</label>
+                  <select id="matchInnings">
+                    <option value="auto" selected>Auto-Detect from Scorecard (Dynamic)</option>
+                    <option value="1">1st Innings (Force Batting 1st · Show Projected, Hide Target)</option>
+                    <option value="2">2nd Innings (Force Chasing · Show Target, Hide Projected)</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label for="matchTotalOvers">Total Match Overs (Auto-Detected)</label>
+                  <input id="matchTotalOvers" type="text"
+                    placeholder="Auto-detected from scorecard (or enter 15, 20, 50)">
+                </div>
+                <div class="btnrow">
+                  <button class="primary" id="btnSaveApply" onclick="saveSettingsAndSync()">✓ Save & Auto-Sync</button>
+                  <button onclick="testConnection()">◎ Test Reader</button>
+                </div>
+                <p class="footer-note" id="syncNote">Click "Save & Auto-Sync" to immediately parse live CricHeroes data
+                  into the overlay.</p>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <h3>▤ Data Status</h3><span class="pill" id="dataPill">● INITIALIZING</span>
+              </div>
+              <div class="card-body status-list">
+                <div class="status-row"><span>Last Updated</span><b id="dataUpdated">Connecting...</b></div>
+                <div class="status-row"><span>Next Update In</span><b id="nextUpdate">4s</b></div>
+                <div class="status-row"><span>Connection</span><b id="dataConnection">Local server & reader</b></div>
+                <div class="status-row"><span>Match Format</span><b id="dataMatchFormat">Auto-detecting...</b></div>
+                <div class="status-row"><span>Data Source</span><b id="dataSourceText">CricHeroes Live Sync</b></div>
+                <div class="status-row"><span>OBS Overlay Source</span><b
+                    id="overlaySourceText">http://localhost:3000/overlay.html</b></div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <h3>ϟ Quick Actions</h3>
+              </div>
+              <div class="card-body quick-grid">
+                <button onclick="testConnection()">↻ Refresh Score</button>
+                <button onclick="openOverlay()">↗ Open Overlay</button>
+                <button onclick="viewRawData()">▤ View Raw Data</button>
+                <button id="btnTogglePolling" class="danger" onclick="togglePolling()">■ Stop UI Polling</button>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div class="lower-grid">
+          <section class="card" id="designCard">
+            <div class="card-head">
+              <h3>◉ Overlay Theme & Layout</h3>
+            </div>
+            <div class="card-body">
+              <div class="design-grid">
+                <div>
+                  <div class="field"><label>Theme</label><select id="theme">
+                      <option value="bluegold">Professional (Blue/Gold)</option>
+                      <option value="blue">Electric Blue</option>
+                      <option value="minimal">Minimal Dark</option>
+                    </select></div>
+                  <div class="field"><label>Overlay Layout</label><select id="layoutChoice">
+                      <option value="full">Full Scorebar (with Players)</option>
+                      <option value="compact">Compact Scorebar</option>
+                    </select></div>
+                  <div class="toggle-row"><span>Team logos / icons</span><input class="switch" id="showLogos"
+                      type="checkbox" checked></div>
+                  <div class="toggle-row"><span>Show Target & RRR</span><input class="switch" id="showTarget"
+                      type="checkbox" checked></div>
+                </div>
+                <div>
+                  <div class="field"><label>Primary Color</label>
+                    <div class="swatch"><input id="primaryColor" type="color" value="#087cff"><input id="primaryHex"
+                        value="#087CFF"></div>
+                  </div>
+                  <div class="field"><label>Secondary Color</label>
+                    <div class="swatch"><input id="secondaryColor" type="color" value="#ffc107"><input id="secondaryHex"
+                        value="#FFC107"></div>
+                  </div>
+                  <div class="field"><label>Background Opacity <span id="opacityText">95%</span></label>
+                    <div class="range-row"><input id="opacity" type="range" min="50" max="100" value="95"><span
+                        id="opacityValue">95%</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" id="displayCard">
+            <div class="card-head">
+              <h3>▣ Display Options</h3>
+            </div>
+            <div class="card-body" id="displayOptions">
+              <div class="toggle-row"><span>Show Tournament Name</span><input class="switch" data-display="tournament"
+                  type="checkbox" checked></div>
+              <div class="toggle-row"><span>Show Venue & Date</span><input class="switch" data-display="venue"
+                  type="checkbox" checked></div>
+              <div class="toggle-row"><span>Show Run Rate (CRR)</span><input class="switch" data-display="crr"
+                  type="checkbox" checked></div>
+              <div class="toggle-row"><span>Show Projected Score</span><input class="switch" data-display="projected"
+                  type="checkbox" checked></div>
+              <div class="toggle-row"><span>Show Target / RRR</span><input class="switch" data-display="target"
+                  type="checkbox" checked></div>
+              <div class="toggle-row"><span>Show Batter Stats</span><input class="switch" data-display="batters"
+                  type="checkbox" checked></div>
+              <div class="toggle-row"><span>Show Bowler Stats</span><input class="switch" data-display="bowler"
+                  type="checkbox" checked></div>
+              <div class="toggle-row"><span>Show This Over</span><input class="switch" data-display="thisover"
+                  type="checkbox" checked></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="card" id="rawCard" style="margin-top:14px;display:none">
+          <div class="card-head">
+            <h3>Raw Data / Reader Diagnostics</h3><button
+              onclick="document.getElementById('rawCard').style.display='none'">Close</button>
+          </div>
+          <div class="card-body">
+            <pre id="rawOutput"
+              style="white-space:pre-wrap;overflow-wrap:anywhere;color:#aee8ff;font-size:12px;background:#061426;padding:12px;border-radius:8px;max-height:400px;overflow:auto"></pre>
+          </div>
+        </section>
+
+        <section class="card" id="obsCard" style="margin-top:14px">
+          <div class="card-head">
+            <h3>▱ OBS Integration</h3>
+          </div>
+          <div class="card-body">
+            <ol style="color:#c5d7ec;line-height:2">
+              <li>In OBS Studio, click <b>Sources → + → Browser</b>.</li>
+              <li>Enter Source Name: <code>Cricket Live Scoreboard</code>.</li>
+              <li>Set URL to <code id="obsUrlText"
+                  style="color:var(--gold);font-weight:700">http://localhost:3000/overlay.html</code></li>
+              <li>Set Width: <b>1920</b>, Height: <b>1080</b>.</li>
+              <li>Check <b>"Shutdown source when not visible"</b> and <b>"Refresh browser when scene becomes
+                  active"</b>.</li>
+              <li>The scoreboard will appear crystal clear at the bottom of the screen with a transparent background!
+              </li>
+            </ol>
+            <button class="primary" onclick="copyOverlayUrl()">Copy OBS Overlay URL</button>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const defaults = {
+      batting_team: "BENGALURU STRIKES", bowling_team: "BALLARI FALCONS", runs: 128, wickets: 3, overs: "20.2", crr: "6.29", projected: 182, target: null, target_overs: 20, currentInnings: 1,
+      chase: "", batters: [{ name: "Aarav Sharma", runs: 42, balls: 38, fours: 6, sixes: 1, strike_rate: "110.5", striker: true }, { name: "Vihaan Reddy", runs: 28, balls: 31, fours: 4, sixes: 0, strike_rate: "90.3", striker: false }],
+      bowler: { name: "Karthik Naik", overs: "4.2", maidens: 0, runs: 32, wickets: 1, economy: "7.38" }, this_over: ["1", "0", "4", "•", "1"], status: "LIVE", venue: "Bengaluru, Karnataka · RBCL Ground", tournament: "RBCL UNDER-14"
+    };
+
+    let current = { ...defaults }, pollTimer = null, isPollingActive = true, broadcastSyncChannel = null;
+
+    function safe(v) { return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])) }
+    function setText(id, v) { if ($(id)) $(id).textContent = v ?? "" }
+    function toast(msg, type = "") { const t = $("toast"); t.textContent = msg; t.className = "toast " + type; t.style.display = "block"; setTimeout(() => t.style.display = "none", 3000) }
+
+    try {
+      broadcastSyncChannel = new BroadcastChannel('ckt_score_sync');
+      broadcastSyncChannel.onmessage = (e) => {
+        if (e.data && e.data.type === 'STATE_UPDATE') {
+          render(e.data.payload);
+        }
+      };
+    } catch (e) { }
+
+    function render(data = current) {
+      current = { ...current, ...data };
+      const s = current;
+      const score = (typeof s.score === "string" && s.score.includes("/")) ? s.score : ((s.runs ?? 0) + "/" + (s.wickets ?? 0));
+      const ov = String(s.overs ?? "0.0");
+      setText("scoreValue", score);
+      setText("oversValue", "(" + ov + " OV)");
+      setText("battingTeam", (s.batting_team || s.battingTeam || defaults.batting_team).toUpperCase());
+      setText("bowlingTeam", (s.bowling_team || s.bowlingTeam || defaults.bowling_team).toUpperCase());
+      setText("crrValue", s.crr ?? "—");
+      setText("projectedValue", s.projected ?? "—");
+      const totalOv = s.totalOvers || s.target_overs || 20;
+      setText("targetValue", s.target ?? "—");
+      setText("targetOvers", "(" + totalOv + " OV)");
+      setText("dataMatchFormat", totalOv + " Overs Match");
+      setText("projSubText", "(in " + totalOv + " OV)");
+      if ($("matchTotalOvers") && document.activeElement !== $("matchTotalOvers") && s.totalOvers) {
+        $("matchTotalOvers").placeholder = `${s.totalOvers} Overs (Auto-Detected)`;
+      }
+
+      // Innings Rule:
+      // If team is batting 1st (Innings 1):
+      //   - ONLY Projected Score is required
+      //   - HIDE Target card completely
+      //   - HIDE Chase card completely
+      // If team is batting 2nd (Innings 2 / Chasing):
+      //   - HIDE Projected Score card
+      //   - Show Target card
+      //   - Show Chase card
+      const isSecondInnings = (Number(s.currentInnings) === 2) || (s.currentInnings == null && Boolean(s.target && Number(s.target) > 0));
+      const statProjCard = $("statProjectedCard");
+      const statTgtCard = $("statTargetCard");
+      const chaseCard = $("chaseCard");
+      const innBadge = $("inningsBadge");
+
+      if (innBadge) {
+        innBadge.textContent = isSecondInnings ? "● 2nd Innings (Chase)" : "● 1st Innings";
+        innBadge.className = "pill " + (isSecondInnings ? "warning" : "");
+      }
+
+      if (isSecondInnings) {
+        if (statProjCard) statProjCard.style.display = "none";
+        if (statTgtCard) statTgtCard.style.display = "block";
+        if (chaseCard) chaseCard.style.display = "flex";
+
+        const bName = (s.batting_team || s.battingTeam || defaults.batting_team).toUpperCase();
+        let chaseStr = s.chase || (s.target ? `${bName} need ${s.requiredRuns || '—'} runs in ${s.ballsRemaining || '—'} balls` : "Live Chase");
+        $("chaseText").innerHTML = safe(chaseStr).replace(/(need \d+ runs in \d+ balls)/i, "<span>$1</span>");
+      } else {
+        // 1st Innings: Target and chase card are not needed. Only projected score is required.
+        if (statProjCard) statProjCard.style.display = "block";
+        if (statTgtCard) statTgtCard.style.display = "none";
+        if (chaseCard) chaseCard.style.display = "none";
+        $("chaseText").innerHTML = "";
+      }
+
+      const titleVal = $("matchTitle").value || s.tournament || "CRICKET · LIVE";
+      const venueVal = $("venue").value || s.venue || "";
+      setText("matchTitleDisplay", titleVal);
+      setText("venueDisplay", venueVal);
+
+      const updateTime = s.updated || new Date().toLocaleTimeString();
+      setText("lastUpdated", "Updated " + updateTime);
+      setText("dataUpdated", updateTime);
+
+      const isLive = s.status === "LIVE" || s.status === "live";
+      setText("connectionText", isLive ? "Connected · updating automatically" : "Live reader synced");
+      setText("matchStatus", isLive ? "LIVE" : (s.status || "DEMO").toUpperCase());
+      setText("dataPill", isLive ? "● LIVE" : "● DEMO");
+      setText("dataConnection", isLive ? "Connected & active" : "Ready");
+
+      const dot = $("headerDot");
+      if (dot) {
+        dot.className = "dot" + (s.isStale ? " stale" : (!isLive ? " offline" : ""));
+      }
+
+      applyTheme();
+      renderMini();
+    }
+
+    function renderMini() {
+      const mount = $("previewMount"), s = current;
+      if (!mount) return;
+      const b1 = s.batters?.[0] || s.striker || defaults.batters[0];
+      const b2 = s.batters?.[1] || s.nonStriker || defaults.batters[1];
+      const bow = s.bowler || defaults.bowler;
+      const score = (typeof s.score === "string" && s.score.includes("/")) ? s.score : ((s.runs ?? 0) + "/" + (s.wickets ?? 0));
+      const ov = String(s.overs ?? "0.0");
+      const isSecondInnings = (Number(s.currentInnings) === 2) || (s.currentInnings == null && Boolean(s.target && Number(s.target) > 0));
+      const totalOv = s.totalOvers || s.target_overs || 20;
+      const situation = isSecondInnings ? `Target: ${safe(s.target || '—')} (${totalOv} Ov)` : `Projected: ${safe(s.projected || '—')} (${totalOv} Ov)`;
+
+      mount.innerHTML = `<div class="mini-score"><div class="mini-top"><div class="mini-team">${safe(s.batting_team || s.battingTeam || defaults.batting_team)}</div><div class="mini-big">${safe(score)}<span class="mini-ov">(${safe(ov)} OV)</span></div><div class="mini-team">${safe(s.bowling_team || s.bowlingTeam || defaults.bowling_team)}</div></div><div class="mini-bottom"><div><span class="muted">BATTER</span><b>${safe(b1?.name || "Aarav Sharma")} · ${safe(b1?.runs ?? 42)}*</b><span>${safe(b2?.name || "Vihaan Reddy")} · ${safe(b2?.runs ?? 28)}</span></div><div><span class="muted">BOWLER</span><b>${safe(bow?.name || "Karthik Naik")}</b><span>${safe(bow?.overs || "4.2")} ov · ${safe(bow?.wickets ?? 1)} wkts</span></div><div><span class="muted">MATCH SITUATION</span><b>${safe(s.crr || "6.29")} CRR</b><span>${situation}</span></div></div></div>`;
+    }
+
+    function applyTheme() {
+      let p = $("primaryColor").value, g = $("secondaryColor").value;
+      if ($("theme").value === "blue") { g = "#00c7ff" }
+      if ($("theme").value === "minimal") { p = "#475569"; g = "#94a3b8" }
+      document.documentElement.style.setProperty("--blue", p);
+      document.documentElement.style.setProperty("--gold", g);
+      document.querySelectorAll(".mini-team:not(:last-child)").forEach(el => el.style.background = `linear-gradient(110deg,${p},#062650)`);
+      document.querySelectorAll(".mini-team:last-child").forEach(el => el.style.background = `linear-gradient(110deg,#3b2a05,${g})`);
+      setText("opacityText", $("opacity").value + "%");
+      setText("opacityValue", $("opacity").value + "%");
+    }
+
+    function saveSettings() {
+      const settings = {
+        url: $("matchUrl").value,
+        interval: $("refreshInterval").value,
+        title: $("matchTitle").value,
+        venue: $("venue").value,
+        theme: $("theme").value,
+        layout: $("layoutChoice").value,
+        primary: $("primaryColor").value,
+        secondary: $("secondaryColor").value,
+        opacity: $("opacity").value,
+        showLogos: $("showLogos").checked,
+        showTarget: $("showTarget").checked,
+        innings: $("matchInnings") ? $("matchInnings").value : "2",
+        displayOptions: {
+          tournament: $('[data-display="tournament"]')?.checked !== false,
+          venue: $('[data-display="venue"]')?.checked !== false,
+          crr: $('[data-display="crr"]')?.checked !== false,
+          projected: $('[data-display="projected"]')?.checked !== false,
+          target: $('[data-display="target"]')?.checked !== false,
+          batters: $('[data-display="batters"]')?.checked !== false,
+          bowler: $('[data-display="bowler"]')?.checked !== false,
+          thisover: $('[data-display="thisover"]')?.checked !== false
+        }
+      };
+      try {
+        localStorage.setItem("chOverlaySettings", JSON.stringify(settings));
+        if (broadcastSyncChannel) {
+          broadcastSyncChannel.postMessage({ type: 'SETTINGS_UPDATE', payload: settings });
+          broadcastSyncChannel.postMessage({ type: 'STATE_UPDATE', payload: current });
+        }
+      } catch (e) { }
+
+      fetch("/api/overlay-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify({
+          theme: settings.theme,
+          layout: settings.layout,
+          primaryColor: settings.primary,
+          secondaryColor: settings.secondary,
+          opacity: settings.opacity,
+          showLogos: settings.showLogos,
+          showTarget: settings.showTarget,
+          displayOptions: settings.displayOptions
+        })
+      }).catch(() => { });
+
+      fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify({
+          matchUrl: settings.url,
+          tournament: settings.title,
+          venue: settings.venue,
+          pollingInterval: Number(settings.interval),
+          totalOvers: $("matchTotalOvers") && $("matchTotalOvers").value.trim() ? Number($("matchTotalOvers").value.trim()) : undefined,
+          currentInnings: $("matchInnings") ? $("matchInnings").value : "auto"
+        })
+      }).catch(() => { });
+
+      setText("matchTitleDisplay", $("matchTitle").value);
+      setText("venueDisplay", $("venue").value);
+      toast("Settings saved & broadcasted to overlay.");
+      render();
+    }
+
+    async function saveSettingsAndSync() {
+      saveSettings();
+      const url = $("matchUrl").value.trim();
+      if (!url) {
+        toast("Please enter a CricHeroes URL first.", "warning");
+        return;
+      }
+
+      const btn = $("btnSaveApply");
+      btn.disabled = true;
+      btn.textContent = "⏳ Syncing CricHeroes...";
+      setText("syncNote", "Connecting to CricHeroes scorecard reader...");
+
+      try {
+        const r = await fetch("/api/auto-configure", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+          body: JSON.stringify({ url })
+        });
+        const data = await r.json();
+        if (data.success && data.state) {
+          render(data.state);
+          if (data.state.tournament) $("matchTitle").value = data.state.tournament;
+          setText("syncNote", "✓ Synced: " + (data.state.tournament || "Live Match"));
+          toast("Auto-configured & synced from CricHeroes!");
+        } else {
+          throw new Error(data.error || "Scraper did not return valid data");
+        }
+      } catch (e) {
+        if (window.AndroidScoreBridge) {
+          setText("syncNote", "Mobile In-App reader active.");
+          toast("Mobile live scraper running.", "info");
+        } else {
+          setText("syncNote", "Sync note: " + e.message);
+          toast("Sync started in background or reader active.", "warning");
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "✓ Save & Auto-Sync";
+      }
+    }
+
+    function loadSaved() {
+      try {
+        const s = JSON.parse(localStorage.getItem("chOverlaySettings") || "null");
+        if (!s) return;
+        if (s.url) $("matchUrl").value = s.url;
+        if (s.interval) $("refreshInterval").value = s.interval;
+        if (s.title) $("matchTitle").value = s.title;
+        if (s.venue) $("venue").value = s.venue;
+        if (s.theme) $("theme").value = s.theme;
+        if (s.layout) $("layoutChoice").value = s.layout;
+        if (s.primary) $("primaryColor").value = s.primary;
+        if (s.secondary) $("secondaryColor").value = s.secondary;
+        if (s.opacity) $("opacity").value = s.opacity;
+        if (s.showLogos !== undefined) $("showLogos").checked = s.showLogos;
+        if (s.showTarget !== undefined) $("showTarget").checked = s.showTarget;
+        if (s.innings && $("matchInnings")) $("matchInnings").value = s.innings;
+        if (s.displayOptions) {
+          Object.keys(s.displayOptions).forEach(k => {
+            const el = $(`[data-display="${k}"]`);
+            if (el) el.checked = s.displayOptions[k];
+          });
+        }
+      } catch (e) { }
+    }
+
+    async function loadSample() {
+      try {
+        await fetch("/api/reset-reference", { method: "POST" });
+        toast("Sample / Reference match reset.");
+        testConnection();
+      } catch (e) {
+        current = { ...defaults, status: "LIVE" };
+        render();
+        toast("Sample match loaded.");
+      }
+    }
+
+    function getOverlayUrl() {
+      return `${location.protocol}//${location.host}/overlay.html`;
+    }
+
+    function openOverlay() {
+      window.open(getOverlayUrl(), "_blank", "noopener");
+    }
+
+    function copyOverlayUrl() {
+      copyValue(getOverlayUrl());
+    }
+
+    function copyValue(s) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(s).then(() => toast("Copied OBS Overlay URL to clipboard!")).catch(() => prompt("Copy this URL:", s));
+      } else {
+        prompt("Copy this URL:", s);
+      }
+    }
+
+    function copyText(id) {
+      copyValue($(id).value);
+    }
+
+    async function testConnection() {
+      try {
+        const r = await fetch("/api/score", { cache: "no-store", headers: { "ngrok-skip-browser-warning": "true" } });
+        if (!r.ok) throw new Error("Server returned HTTP " + r.status);
+        const d = await r.json();
+        render(d);
+        toast("Live score synced from server.");
+      } catch (e) {
+        try {
+          const r2 = await fetch("/score", { cache: "no-store", headers: { "ngrok-skip-browser-warning": "true" } });
+          if (!r2.ok) throw new Error();
+          const d2 = await r2.json();
+          render(d2);
+          toast("Live score synced from /score.");
+        } catch (err) {
+          setText("dataConnection", "Offline / Error");
+          setText("connectionText", "Server offline");
+          toast("Could not reach score endpoint. Ensure server is running.", "error");
+        }
+      }
+    }
+
+    async function pollScore() {
+      if (!isPollingActive) return;
+      try {
+        const r = await fetch("/api/score", { cache: "no-store", headers: { "ngrok-skip-browser-warning": "true" } });
+        if (r.ok) {
+          const d = await r.json();
+          render(d);
+        }
+      } catch (e) { }
+    }
+
+    function togglePolling() {
+      const btn = $("btnTogglePolling");
+      if (isPollingActive) {
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = null;
+        isPollingActive = false;
+        btn.className = "primary";
+        btn.textContent = "▶ Resume Polling";
+        toast("UI polling paused.");
+      } else {
+        isPollingActive = true;
+        startPoll();
+        btn.className = "danger";
+        btn.textContent = "■ Stop UI Polling";
+        toast("UI polling resumed.");
+      }
+    }
+
+    function viewRawData() {
+      $("rawCard").style.display = "block";
+      $("rawOutput").textContent = JSON.stringify({ current, endpoint: "/api/score", settings: localStorage.getItem("chOverlaySettings") }, null, 2);
+      $("rawCard").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    document.querySelectorAll(".nav").forEach(b => b.addEventListener("click", () => {
+      document.querySelectorAll(".nav").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      const p = b.dataset.page;
+      const target = { dashboard: null, match: "matchCard", design: "designCard", display: "displayCard", data: "rawCard", obs: "obsCard" }[p];
+      if (p === "data") viewRawData();
+      else if (target) $(target).scrollIntoView({ behavior: "smooth", block: "start" });
+      else window.scrollTo({ top: 0, behavior: "smooth" });
+    }));
+
+    ["theme", "primaryColor", "secondaryColor", "opacity", "layoutChoice", "showLogos", "showTarget", "previewLayout"].forEach(id => {
+      const el = $(id);
+      if (el) {
+        el.addEventListener("input", () => {
+          if (id === "previewLayout") $("layoutChoice").value = $("previewLayout").value;
+          if (id === "layoutChoice") $("previewLayout").value = $("layoutChoice").value;
+          applyTheme();
+          saveSettings();
+        });
+      }
+    });
+
+    document.querySelectorAll("[data-display]").forEach(el => el.addEventListener("change", () => {
+      render();
+      saveSettings();
+    }));
+
+    $("matchTitle").addEventListener("input", () => setText("matchTitleDisplay", $("matchTitle").value));
+    $("venue").addEventListener("input", () => setText("venueDisplay", $("venue").value));
+    $("primaryColor").addEventListener("input", () => { $("primaryHex").value = $("primaryColor").value.toUpperCase(); applyTheme(); });
+    $("secondaryColor").addEventListener("input", () => { $("secondaryHex").value = $("secondaryColor").value.toUpperCase(); applyTheme(); });
+    $("primaryHex").addEventListener("change", () => { if (/^#[0-9a-f]{6}$/i.test($("primaryHex").value)) { $("primaryColor").value = $("primaryHex").value; applyTheme(); } });
+    $("secondaryHex").addEventListener("change", () => { if (/^#[0-9a-f]{6}$/i.test($("secondaryHex").value)) { $("secondaryColor").value = $("secondaryHex").value; applyTheme(); } });
+    $("refreshInterval").addEventListener("change", startPoll);
+    if ($("matchInnings")) {
+      $("matchInnings").addEventListener("change", () => {
+        const val = $("matchInnings").value;
+        if (val === "auto") {
+          saveSettings();
+          pollScore();
+          return;
+        }
+        const inn = Number(val);
+        current.currentInnings = inn;
+        if (inn === 1) {
+          current.target = null;
+          current.requiredRuns = null;
+          current.ballsRemaining = null;
+          current.rrr = null;
+          current.chase = `${(current.batting_team || current.battingTeam || defaults.batting_team)} 1st Innings`;
+        } else {
+          current.currentInnings = 2;
+          current.target = current.target || 185;
+          current.requiredRuns = current.requiredRuns || 57;
+          current.ballsRemaining = current.ballsRemaining || 28;
+          current.chase = `${(current.batting_team || current.battingTeam || defaults.batting_team)} need ${current.requiredRuns} runs in ${current.ballsRemaining} balls`;
+        }
+        render();
+        saveSettings();
+      });
+    }
+
+    function startPoll() {
+      if (pollTimer) clearInterval(pollTimer);
+      const interval = Math.max(2, Number($("refreshInterval").value) || 4);
+      pollTimer = setInterval(pollScore, interval * 1000);
+      setText("nextUpdate", interval + "s");
+    }
+
+    function boot() {
+      const obsUrl = getOverlayUrl();
+      setText("obsUrlText", obsUrl);
+      setText("overlaySourceText", obsUrl);
+      loadSaved();
+      render();
+      startPoll();
+      testConnection();
+    }
+
+    window.addEventListener("DOMContentLoaded", boot);
+  </script>
+</body>
+
+</html>
