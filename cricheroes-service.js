@@ -719,4 +719,22 @@ async function scrapeCricHeroesUrl(url) {
   }
 }
 
-module.exports = { parseUrlMetadata, scrapeCricHeroesUrl };
+async function getPageDebugInfo() {
+  if (!persistentPage || persistentPage.isClosed()) {
+    return { status: 'no_page_running', persistentBrowser: Boolean(persistentBrowser) };
+  }
+  try {
+    const title = await persistentPage.title();
+    const url = persistentPage.url();
+    const textSlice = await persistentPage.evaluate(() => document.body ? document.body.innerText.slice(0, 800) : 'no body');
+    const canvasCount = await persistentPage.evaluate(() => document.querySelectorAll('canvas').length);
+    const canvasTexts = await persistentPage.evaluate(() => {
+      return Array.from(document.querySelectorAll('canvas')).map(c => c.getAttribute('data-canvas-text')).filter(Boolean);
+    });
+    return { title, url, canvasCount, canvasTexts, textSlice };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+module.exports = { parseUrlMetadata, scrapeCricHeroesUrl, getPageDebugInfo };

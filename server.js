@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const http = require('http');
-const { parseUrlMetadata, scrapeCricHeroesUrl } = require('./cricheroes-service');
+const { parseUrlMetadata, scrapeCricHeroesUrl, getPageDebugInfo } = require('./cricheroes-service');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +17,9 @@ app.get('/', (req, res) => {
 });
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
+});
+app.get('/api/debug-browser', async (req, res) => {
+  res.json(await getPageDebugInfo());
 });
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
