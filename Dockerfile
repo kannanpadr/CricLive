@@ -8,6 +8,7 @@ RUN npm install --ignore-scripts
 COPY . .
 
 ENV PORT=10000
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 EXPOSE 10000
 
 CMD ["node", "server.js"]

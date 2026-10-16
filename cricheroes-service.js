@@ -1,7 +1,5 @@
 if (require('fs').existsSync('/ms-playwright')) {
   process.env.PLAYWRIGHT_BROWSERS_PATH = '/ms-playwright';
-} else {
-  process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '0';
 }
 const { chromium } = require('playwright');
 
@@ -117,7 +115,17 @@ async function getPersistentPage(targetUrl) {
         currentActiveUrl = targetUrl;
         lastReloadTime = Date.now();
         await persistentPage.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
-        await persistentPage.waitForTimeout(3000);
+        try {
+          await persistentPage.waitForFunction(() => {
+            const canvases = document.querySelectorAll('canvas');
+            return Array.from(canvases).some(c => {
+              const t = c.getAttribute('data-canvas-text');
+              return t && t.includes('/');
+            });
+          }, { timeout: 9000 });
+        } catch (_) {
+          await persistentPage.waitForTimeout(3000);
+        }
         return persistentPage;
       }
     } catch (e) {
@@ -188,7 +196,17 @@ async function getPersistentPage(targetUrl) {
 
   currentActiveUrl = targetUrl;
   await persistentPage.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
-  await persistentPage.waitForTimeout(3500);
+  try {
+    await persistentPage.waitForFunction(() => {
+      const canvases = document.querySelectorAll('canvas');
+      return Array.from(canvases).some(c => {
+        const t = c.getAttribute('data-canvas-text');
+        return t && t.includes('/');
+      });
+    }, { timeout: 9000 });
+  } catch (_) {
+    await persistentPage.waitForTimeout(3000);
+  }
 
   return persistentPage;
 }
@@ -670,6 +688,8 @@ async function scrapeCricHeroesUrl(url) {
       tournament: meta.tournament,
       status: 'live',
       statusText: 'LIVE · AWAITING DATA',
+      lastErrorMessage: err.message,
+      errorCount: 1,
       teamA: { name: meta.teamA.name, shortName: meta.teamA.shortName, score: 0, wickets: 0, overs: 0.0, isBatting: true, color: '#e63946' },
       teamB: { name: meta.teamB.name, shortName: meta.teamB.shortName, score: 0, wickets: 0, overs: 0.0, isBatting: false, color: '#2a9d8f' },
       battingTeam: meta.teamA.shortName,
