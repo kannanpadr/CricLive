@@ -137,11 +137,18 @@ async function getPersistentPage(targetUrl) {
 
   try {
     if (process.platform === 'win32') {
-      persistentBrowser = await chromium.launch({
-        channel: 'msedge',
-        headless: true,
-        args: launchArgs
-      });
+      try {
+        persistentBrowser = await chromium.launch({
+          channel: 'msedge',
+          headless: true,
+          args: launchArgs
+        });
+      } catch (_) {
+        persistentBrowser = await chromium.launch({
+          headless: true,
+          args: launchArgs
+        });
+      }
     } else {
       persistentBrowser = await chromium.launch({
         headless: true,
@@ -149,11 +156,10 @@ async function getPersistentPage(targetUrl) {
       });
     }
   } catch (launchErr) {
-    console.warn('[Browser Launch fallback]:', launchErr.message);
-    persistentBrowser = await chromium.launch({
-      headless: true,
-      args: launchArgs
-    });
+    console.warn('[Browser Scraper Notice]: Headless browser unavailable on this server:', launchErr.message);
+    persistentBrowser = null;
+    persistentPage = null;
+    throw new Error('Headless browser unavailable: ' + launchErr.message);
   }
 
   persistentContext = await persistentBrowser.newContext({
