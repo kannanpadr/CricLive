@@ -619,6 +619,12 @@ fun CktAppScreen(
     if (showSyncDialog) {
         AlertDialog(
             onDismissRequest = { showSyncDialog = false },
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .padding(vertical = 4.dp),
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false
+            ),
             title = {
                 Text(
                     text = "📱 Mobile 4G CricHeroes Sync",
@@ -628,7 +634,11 @@ fun CktAppScreen(
                 )
             },
             text = {
-                Column {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
                     Text(
                         text = "Bypasses Cloudflare by using your phone's 4G mobile connection to read CricHeroes and push real live scores to your server.",
                         fontSize = 12.sp,
@@ -707,6 +717,12 @@ fun CktAppScreen(
     if (showUrlDialog) {
         AlertDialog(
             onDismissRequest = { showUrlDialog = false },
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .padding(vertical = 4.dp),
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false
+            ),
             title = {
                 Text(
                     text = "Configure Server URL",
@@ -715,7 +731,11 @@ fun CktAppScreen(
                 )
             },
             text = {
-                Column {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
                     Text(
                         text = "Enter your CKTScore server address (or tunnel):",
                         fontSize = 12.sp,
@@ -1479,13 +1499,26 @@ fun CameraStreamOverlayScreen(
     if (showStreamSetupDialog) {
         AlertDialog(
             onDismissRequest = { showStreamSetupDialog = false },
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false
+            ),
             title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(text = "🔴 YouTube Live Broadcast", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
                 }
             },
             text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
                     Text(
                         text = "Broadcast your live camera feed mixed with CricHeroes live score overlay in real-time.",
                         fontSize = 12.sp,
@@ -1595,14 +1628,32 @@ fun CameraStreamOverlayScreen(
                         placeholder = { Text("e.g. abcd-1234-wxyz-5678", fontSize = 12.sp) },
                         visualTransformation = if (isKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
-                            Text(
-                                text = if (isKeyVisible) "Hide" else "Show",
-                                fontSize = 11.sp,
-                                color = Color(0xFF00C7FF),
-                                modifier = Modifier
-                                    .clickable { isKeyVisible = !isKeyVisible }
-                                    .padding(8.dp)
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                val clipText = clipboard?.primaryClip?.getItemAt(0)?.text?.toString()?.trim()
+                                if (!clipText.isNullOrEmpty() && clipText != streamKey) {
+                                    Text(
+                                        text = "📋 Paste",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF00E59B),
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier
+                                            .clickable {
+                                                streamKey = clipText
+                                                streamKeyValidationError = null
+                                            }
+                                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                                    )
+                                }
+                                Text(
+                                    text = if (isKeyVisible) "Hide" else "Show",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF00C7FF),
+                                    modifier = Modifier
+                                        .clickable { isKeyVisible = !isKeyVisible }
+                                        .padding(8.dp)
+                                )
+                            }
                         },
                         isError = streamKeyValidationError != null
                     )
@@ -1667,7 +1718,24 @@ fun CameraStreamOverlayScreen(
                         onValueChange = { rtmpServerUrl = it },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        placeholder = { Text("rtmps://a.rtmps.youtube.com:443/live2", fontSize = 12.sp) }
+                        placeholder = { Text("rtmps://a.rtmps.youtube.com:443/live2", fontSize = 12.sp) },
+                        trailingIcon = {
+                            Text(
+                                text = "📋 Paste",
+                                fontSize = 11.sp,
+                                color = Color(0xFF00E59B),
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .clickable {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                        val clipText = clipboard?.primaryClip?.getItemAt(0)?.text?.toString()?.trim()
+                                        if (!clipText.isNullOrEmpty()) {
+                                            rtmpServerUrl = clipText
+                                        }
+                                    }
+                                    .padding(8.dp)
+                            )
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1758,38 +1826,46 @@ fun CameraStreamOverlayScreen(
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        val trimmedKey = streamKey.trim()
-                        if (trimmedKey.isEmpty()) {
-                            streamKeyValidationError = "Please enter your YouTube Stream Key"
-                            return@Button
-                        }
-
-                        // Persist user stream settings
-                        streamPrefs.edit()
-                            .putString("yt_stream_key", trimmedKey)
-                            .putString("yt_rtmp_url", rtmpServerUrl.trim())
-                            .putString("yt_quality", selectedQuality)
-                            .putBoolean("yt_audio_enabled", isMicAudioEnabled)
-                            .apply()
-
-                        showStreamSetupDialog = false
-
-                        // Request Android MediaProjection screen capture permission
-                        val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
-                        mediaProjectionLauncher.launch(captureIntent)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE50914))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🔴 Start YouTube Stream", fontWeight = FontWeight.Bold, color = Color.White)
+                    OutlinedButton(
+                        onClick = { showStreamSetupDialog = false },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text("Cancel", color = Color(0xFFA6BAD4))
+                    }
+                    Button(
+                        onClick = {
+                            val trimmedKey = streamKey.trim()
+                            if (trimmedKey.isEmpty()) {
+                                streamKeyValidationError = "Please enter your YouTube Stream Key"
+                                return@Button
+                            }
+
+                            // Persist user stream settings
+                            streamPrefs.edit()
+                                .putString("yt_stream_key", trimmedKey)
+                                .putString("yt_rtmp_url", rtmpServerUrl.trim())
+                                .putString("yt_quality", selectedQuality)
+                                .putBoolean("yt_audio_enabled", isMicAudioEnabled)
+                                .apply()
+
+                            showStreamSetupDialog = false
+
+                            // Request Android MediaProjection screen capture permission
+                            val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
+                            mediaProjectionLauncher.launch(captureIntent)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE50914))
+                    ) {
+                        Text("🔴 Start YouTube Stream", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showStreamSetupDialog = false }) {
-                    Text("Cancel", color = Color(0xFFA6BAD4))
-                }
-            },
+            dismissButton = null,
             containerColor = Color(0xFF0B1B32)
         )
     }
