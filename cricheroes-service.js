@@ -737,4 +737,4 @@ async function getPageDebugInfo() {
   }
 }
 
-module.exports = { parseUrlMetadata, scrapeCricHeroesUrl, getPageDebugInfo };
+module.exports = { parseUrlMetadata, scrapeCricHeroesUrl, getPageDebugInfo, processExtractedData };

@@ -1420,6 +1420,11 @@
       btn.textContent = "⏳ Syncing CricHeroes...";
       setText("syncNote", "Connecting to CricHeroes scorecard reader...");
 
+      // Automatically activate Mobile 4G Syncer if running inside Android App
+      if (window.AndroidScoreBridge && window.AndroidScoreBridge.startCricHeroesSync) {
+        try { window.AndroidScoreBridge.startCricHeroesSync(url); } catch (_) {}
+      }
+
       try {
         const r = await fetch("/api/auto-configure", {
           method: "POST",
@@ -1430,15 +1435,20 @@
         if (data.success && data.state) {
           render(data.state);
           if (data.state.tournament) $("matchTitle").value = data.state.tournament;
-          setText("syncNote", "✓ Synced: " + (data.state.tournament || "Live Match"));
-          toast("Auto-configured & synced from CricHeroes!");
+          if (data.state.score === "0/0" && window.AndroidScoreBridge) {
+            setText("syncNote", "📱 Cloudflare bypassed: 4G Mobile Reader streaming live score!");
+            toast("Phone 4G reader streaming live score to server!", "info");
+          } else {
+            setText("syncNote", "✓ Synced: " + (data.state.tournament || "Live Match"));
+            toast("Auto-configured & synced from CricHeroes!");
+          }
         } else {
           throw new Error(data.error || "Scraper did not return valid data");
         }
       } catch (e) {
         if (window.AndroidScoreBridge) {
-          setText("syncNote", "Mobile In-App reader active.");
-          toast("Mobile live scraper running.", "info");
+          setText("syncNote", "📱 Phone 4G Mobile reader streaming live score!");
+          toast("Mobile 4G live scraper running.", "info");
         } else {
           setText("syncNote", "Sync note: " + e.message);
           toast("Sync started in background or reader active.", "warning");

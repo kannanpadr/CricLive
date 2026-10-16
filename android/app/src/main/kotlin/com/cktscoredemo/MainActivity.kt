@@ -183,6 +183,7 @@ fun CktAppScreen(
     initialUrl: String,
     onSaveUrl: (String) -> Unit
 ) {
+    val context = LocalContext.current
     var currentUrl by remember { mutableStateOf(initialUrl) }
     var showUrlDialog by remember { mutableStateOf(false) }
     var inputUrlText by remember { mutableStateOf(initialUrl) }
@@ -193,6 +194,26 @@ fun CktAppScreen(
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var activeMode by remember { mutableStateOf(AppMode.CONTROL) }
     var isFullscreen by remember { mutableStateOf(false) }
+
+    // Method 1: Mobile 4G CricHeroes Sync State
+    var showSyncDialog by remember { mutableStateOf(false) }
+    var mobileSyncUrl by remember { mutableStateOf("https://cricheroes.com/scorecard/27695455/hyper-turf-maharaja-dasara-cup-u-13-2026/falcon-12-vs-kashish-cricket-club/live") }
+    var isMobileSyncRunning by remember { mutableStateOf(false) }
+    var mobileSyncStatusText by remember { mutableStateOf("Ready to sync") }
+
+    val syncer = remember {
+        MobileCricHeroesSyncer(context).apply {
+            onStatusChanged = { status ->
+                mobileSyncStatusText = status
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            syncer.stopSync()
+        }
+    }
 
     val overlayUrl = remember(currentUrl) {
         val baseUrl = currentUrl.trimEnd('/')
@@ -314,6 +335,23 @@ fun CktAppScreen(
                             )
                         }
 
+                        // 📱 4G CRICHEROES SYNC BUTTON (Method 1: Bypasses Cloudflare)
+                        Button(
+                            onClick = { showSyncDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isMobileSyncRunning) Color(0xFF00A86B) else Color(0xFF102641)
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 7.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = if (isMobileSyncRunning) "🟢 4G Sync" else "📱 4G Sync",
+                                fontSize = 11.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
                         // Server Settings Button
                         Button(
                             onClick = {
@@ -390,6 +428,28 @@ fun CktAppScreen(
                                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                                 cacheMode = WebSettings.LOAD_DEFAULT
                             }
+
+                            // Expose AndroidScoreBridge for web control panel
+                            addJavascriptInterface(object {
+                                @JavascriptInterface
+                                fun startCricHeroesSync(url: String) {
+                                    Handler(Looper.getMainLooper()).post {
+                                        if (url.isNotBlank()) {
+                                            mobileSyncUrl = url
+                                            isMobileSyncRunning = true
+                                            syncer.startSync(url, currentUrl)
+                                        }
+                                    }
+                                }
+
+                                @JavascriptInterface
+                                fun stopCricHeroesSync() {
+                                    Handler(Looper.getMainLooper()).post {
+                                        isMobileSyncRunning = false
+                                        syncer.stopSync()
+                                    }
+                                }
+                            }, "AndroidScoreBridge")
 
                             webChromeClient = object : WebChromeClient() {
                                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -555,6 +615,94 @@ fun CktAppScreen(
         }
     }
 
+    // 📱 Mobile 4G CricHeroes Sync Dialog (Method 1)
+    if (showSyncDialog) {
+        AlertDialog(
+            onDismissRequest = { showSyncDialog = false },
+            title = {
+                Text(
+                    text = "📱 Mobile 4G CricHeroes Sync",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontSize = 16.sp
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Bypasses Cloudflare by using your phone's 4G mobile connection to read CricHeroes and push real live scores to your server.",
+                        fontSize = 12.sp,
+                        color = Color(0xFFA6BAD4)
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "CricHeroes Match URL:",
+                        fontSize = 12.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = mobileSyncUrl,
+                        onValueChange = { mobileSyncUrl = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("https://cricheroes.com/scorecard/...") },
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        PresetChip(label = "Match 27695455") {
+                            mobileSyncUrl = "https://cricheroes.com/scorecard/27695455/hyper-turf-maharaja-dasara-cup-u-13-2026/falcon-12-vs-kashish-cricket-club/live"
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF071529)),
+                        border = BorderStroke(1.dp, if (isMobileSyncRunning) Color(0xFF00E59B) else Color(0xFF1E3A5F)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = "Status: $mobileSyncStatusText",
+                                fontSize = 12.sp,
+                                color = if (isMobileSyncRunning) Color(0xFF00E59B) else Color(0xFFA6BAD4),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (isMobileSyncRunning) {
+                            isMobileSyncRunning = false
+                            syncer.stopSync()
+                        } else {
+                            if (mobileSyncUrl.isNotBlank()) {
+                                isMobileSyncRunning = true
+                                syncer.startSync(mobileSyncUrl, currentUrl)
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isMobileSyncRunning) Color(0xFFFF4E61) else Color(0xFF00A86B)
+                    )
+                ) {
+                    Text(if (isMobileSyncRunning) "Stop Sync" else "Start 4G Sync", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showSyncDialog = false }) {
+                    Text("Close", color = Color.White)
+                }
+            }
+        )
+    }
+
     // Server Configuration Dialog
     if (showUrlDialog) {
         AlertDialog(
@@ -596,6 +744,9 @@ fun CktAppScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        PresetChip(label = "Render Cloud") {
+                            inputUrlText = "https://criclive-lwgn.onrender.com"
+                        }
                         PresetChip(label = "Wi-Fi (192.168.1.9:3000)") {
                             inputUrlText = "http://192.168.1.9:3000"
                         }
@@ -1731,5 +1882,239 @@ fun PresetChip(label: String, onClick: () -> Unit) {
             .padding(horizontal = 8.dp, vertical = 5.dp)
     ) {
         Text(text = label, fontSize = 11.sp, color = Color(0xFF00C7FF))
+    }
+}
+
+/**
+ * Method 1: Mobile-Assisted CricHeroes Syncer
+ * Bypasses Cloudflare datacenter IP blocking by loading CricHeroes on the user's
+ * Android phone with 4G/5G mobile connection, extracting live scores from the canvas/DOM,
+ * and pushing them to Render (/api/mobile-sync).
+ */
+class MobileCricHeroesSyncer(private val context: Context) {
+    private var syncWebView: WebView? = null
+    private val handler = Handler(Looper.getMainLooper())
+    var isSyncing = false
+        private set
+    var currentMatchUrl: String = ""
+        private set
+    var currentServerUrl: String = ""
+        private set
+    private var pollRunnable: Runnable? = null
+    var onStatusChanged: ((String) -> Unit)? = null
+    var onScoreUpdated: ((String) -> Unit)? = null
+
+    fun startSync(matchUrl: String, serverUrl: String) {
+        if (matchUrl.isBlank()) return
+        currentMatchUrl = matchUrl.trim()
+        currentServerUrl = serverUrl.trim().trimEnd('/')
+        isSyncing = true
+        onStatusChanged?.invoke("Starting 4G mobile reader...")
+
+        handler.post {
+            initWebView()
+            val target = if (currentMatchUrl.endsWith("/live")) currentMatchUrl else "$currentMatchUrl/live"
+            syncWebView?.loadUrl(target)
+        }
+    }
+
+    fun stopSync() {
+        isSyncing = false
+        pollRunnable?.let { handler.removeCallbacks(it) }
+        handler.post {
+            try {
+                syncWebView?.stopLoading()
+                syncWebView?.loadUrl("about:blank")
+            } catch (_: Exception) {}
+        }
+        onStatusChanged?.invoke("Sync stopped")
+    }
+
+    private fun initWebView() {
+        if (syncWebView != null) return
+        syncWebView = WebView(context).apply {
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+                userAgentString = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
+                cacheMode = WebSettings.LOAD_DEFAULT
+            }
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    if (!isSyncing) return
+                    val hookJs = """
+                        (function() {
+                            if (window.__chHookInjected) return;
+                            window.__chHookInjected = true;
+                            var orig = CanvasRenderingContext2D.prototype.fillText;
+                            CanvasRenderingContext2D.prototype.fillText = function(text) {
+                                if (this.canvas) {
+                                    this.canvas.setAttribute('data-canvas-text', String(text).trim());
+                                }
+                                return orig.apply(this, arguments);
+                            };
+                        })();
+                    """.trimIndent()
+                    view?.evaluateJavascript(hookJs, null)
+
+                    scheduleExtraction(4000)
+                }
+
+                @SuppressLint("WebViewClientOnReceivedSslError")
+                override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+                    handler?.proceed()
+                }
+            }
+        }
+    }
+
+    private fun scheduleExtraction(delayMs: Long) {
+        pollRunnable?.let { handler.removeCallbacks(it) }
+        pollRunnable = Runnable {
+            if (!isSyncing) return@Runnable
+            extractAndPostScore()
+        }
+        handler.postDelayed(pollRunnable!!, delayMs)
+    }
+
+    private fun extractAndPostScore() {
+        val extractJs = """
+            (function() {
+                var d = {
+                    title: document.title || '',
+                    bodyText: (document.body && document.body.innerText) ? document.body.innerText : '',
+                    scores: [],
+                    batters: [],
+                    bowlers: [],
+                    recentBalls: []
+                };
+                var canvases = document.querySelectorAll('canvas');
+                for (var i = 0; i < canvases.length; i++) {
+                    var c = canvases[i];
+                    var t = c.getAttribute('data-canvas-text');
+                    if (t && t.indexOf('/') !== -1) {
+                        d.scores.push({
+                            score: t,
+                            parentText: (c.parentElement && c.parentElement.innerText) ? c.parentElement.innerText.trim() : ''
+                        });
+                    }
+                }
+                var tables = document.querySelectorAll('table');
+                if (tables.length > 0) {
+                    var rows = tables[0].querySelectorAll('tbody tr');
+                    for (var r = 0; r < rows.length; r++) {
+                        var tds = rows[r].querySelectorAll('td');
+                        if (tds.length >= 6) {
+                            var nameEl = tds[0].querySelector('a') || tds[0].querySelector('.playerLink') || tds[0];
+                            var name = (nameEl.innerText || '').split('\n')[0].replace(/[*()]/g, '').trim();
+                            var canvas = tds[1].querySelector('canvas');
+                            var runs = canvas ? canvas.getAttribute('data-canvas-text') : '';
+                            d.batters.push({
+                                name: name,
+                                runs: runs || '',
+                                balls: (tds[2].innerText || '').trim(),
+                                fours: (tds[3].innerText || '').trim(),
+                                sixes: (tds[4].innerText || '').trim(),
+                                sr: (tds[5].innerText || '').trim()
+                            });
+                        }
+                    }
+                }
+                if (tables.length > 1) {
+                    var bRows = tables[1].querySelectorAll('tbody tr');
+                    for (var br = 0; br < bRows.length; br++) {
+                        var bTds = bRows[br].querySelectorAll('td');
+                        if (bTds.length >= 6) {
+                            var bNameEl = bTds[0].querySelector('a') || bTds[0].querySelector('.playerLink') || bTds[0];
+                            var bName = (bNameEl.innerText || '').split('\n')[0].replace(/[*()]/g, '').trim();
+                            var bCanvas = bTds[3].querySelector('canvas');
+                            var bRuns = bCanvas ? bCanvas.getAttribute('data-canvas-text') : '';
+                            d.bowlers.push({
+                                name: bName,
+                                overs: (bTds[1].innerText || '').trim(),
+                                maidens: (bTds[2].innerText || '').trim(),
+                                runs: bRuns || '',
+                                wickets: (bTds[4].innerText || '').trim(),
+                                eco: (bTds[5].innerText || '').trim()
+                            });
+                        }
+                    }
+                }
+                var balls = document.querySelectorAll('[class*="recentBall"], [class*="ballBubble"], [class*="delivery"]');
+                for (var bi = 0; bi < balls.length; bi++) {
+                    var bt = (balls[bi].innerText || '').trim();
+                    if (/^[0-6wWdnbNB]$/.test(bt)) d.recentBalls.push(bt);
+                }
+                return JSON.stringify(d);
+            })()
+        """.trimIndent()
+
+        syncWebView?.evaluateJavascript(extractJs) { jsonResult ->
+            if (jsonResult != null && jsonResult != "null" && isSyncing) {
+                Thread {
+                    try {
+                        val rawJson = if (jsonResult.startsWith("\"") && jsonResult.endsWith("\"")) {
+                            JSONTokener(jsonResult).nextValue().toString()
+                        } else {
+                            jsonResult
+                        }
+                        val domData = JSONObject(rawJson)
+
+                        val payload = JSONObject().apply {
+                            put("url", currentMatchUrl)
+                            put("domData", domData)
+                        }
+
+                        val targetEndpoint = if (currentServerUrl.startsWith("file://") || currentServerUrl.isBlank()) {
+                            "https://criclive-lwgn.onrender.com/api/mobile-sync"
+                        } else {
+                            "$currentServerUrl/api/mobile-sync"
+                        }
+
+                        val urlObj = java.net.URL(targetEndpoint)
+                        val conn = urlObj.openConnection() as java.net.HttpURLConnection
+                        conn.requestMethod = "POST"
+                        conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                        conn.setRequestProperty("Accept", "application/json")
+                        conn.doOutput = true
+                        conn.connectTimeout = 8000
+                        conn.readTimeout = 8000
+
+                        val os = conn.outputStream
+                        os.write(payload.toString().toByteArray(Charsets.UTF_8))
+                        os.flush()
+                        os.close()
+
+                        val code = conn.responseCode
+                        if (code in 200..299) {
+                            val respText = conn.inputStream.bufferedReader().use { it.readText() }
+                            val respJson = JSONObject(respText)
+                            val state = respJson.optJSONObject("state")
+                            val scoreStr = state?.optString("score") ?: ""
+                            val battingTeam = state?.optString("batting_team") ?: ""
+                            val overs = state?.optString("overs") ?: ""
+
+                            handler.post {
+                                val summary = if (scoreStr.isNotBlank()) "$battingTeam $scoreStr ($overs Ov)" else "Score Synced"
+                                onStatusChanged?.invoke("✓ Synced via 4G: $summary")
+                                onScoreUpdated?.invoke(summary)
+                            }
+                        } else {
+                            handler.post {
+                                onStatusChanged?.invoke("Server response HTTP $code")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        handler.post {
+                            onStatusChanged?.invoke("Syncing... (${e.message ?: "network retry"})")
+                        }
+                    }
+                }.start()
+            }
+            if (isSyncing) {
+                scheduleExtraction(6000)
+            }
+        }
     }
 }

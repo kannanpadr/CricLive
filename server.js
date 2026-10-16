@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const http = require('http');
-const { parseUrlMetadata, scrapeCricHeroesUrl, getPageDebugInfo } = require('./cricheroes-service');
+const { parseUrlMetadata, scrapeCricHeroesUrl, getPageDebugInfo, processExtractedData } = require('./cricheroes-service');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -363,6 +363,57 @@ app.post('/api/auto-configure', async (req, res) => {
   } catch (err) {
     console.error("[Auto-Config] Error:", err);
     res.status(500).json({ error: "Failed to auto-configure match: " + err.message });
+  }
+});
+
+// 2b. MOBILE-ASSISTED SYNC (Bypasses Cloudflare using user's mobile 4G/5G connection)
+app.post(['/api/mobile-sync', '/api/sync-score'], (req, res) => {
+  const { url, domData, state } = req.body;
+  if (!url && !domData && !state) {
+    return res.status(400).json({ error: "Missing match URL, domData, or state payload" });
+  }
+
+  try {
+    let parsed = null;
+    const matchUrl = url || matchState.matchUrl;
+
+    if (domData && matchUrl) {
+      const meta = parseUrlMetadata(matchUrl);
+      parsed = processExtractedData(domData, meta, matchUrl);
+    } else if (state) {
+      parsed = state;
+    }
+
+    if (parsed) {
+      pushHistory();
+      delete matchState.operatorInnings;
+      delete matchState.operatorTotalOvers;
+
+      matchState = {
+        ...matchState,
+        ...parsed,
+        matchUrl: matchUrl,
+        lastUpdated: new Date().toISOString(),
+        isStale: false,
+        sourceMode: 'mobile_sync'
+      };
+
+      recalculateStats();
+      scheduleStaleCheck();
+
+      console.log(`[Mobile-Sync] ✓ Real-time update from phone: ${matchState.tournament} · ${matchState.teamA?.shortName || 'A'} (${matchState.teamA?.score}/${matchState.teamA?.wickets}) vs ${matchState.teamB?.shortName || 'B'} (${matchState.teamB?.score}/${matchState.teamB?.wickets})`);
+
+      return res.json({
+        success: true,
+        message: "Live score synced successfully from mobile device",
+        state: getEnrichedState()
+      });
+    }
+
+    res.status(400).json({ error: "Could not parse mobile sync data" });
+  } catch (err) {
+    console.error("[Mobile-Sync Error]:", err);
+    res.status(500).json({ error: "Failed to process mobile sync: " + err.message });
   }
 });
 
