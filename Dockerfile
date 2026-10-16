@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/playwright:v1.64.0-noble
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm install --ignore-scripts
 
 COPY . .
 
