@@ -124,19 +124,37 @@ async function getPersistentPage(targetUrl) {
   }
 
   // Launch persistent browser with stealth & anti-throttling flags
-  persistentBrowser = await chromium.launch({
-    channel: 'msedge',
-    headless: true,
-    args: [
-      '--disable-blink-features=AutomationControlled',
-      '--no-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-web-security',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding'
-    ]
-  });
+  const launchArgs = [
+    '--disable-blink-features=AutomationControlled',
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-web-security',
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding'
+  ];
+
+  try {
+    if (process.platform === 'win32') {
+      persistentBrowser = await chromium.launch({
+        channel: 'msedge',
+        headless: true,
+        args: launchArgs
+      });
+    } else {
+      persistentBrowser = await chromium.launch({
+        headless: true,
+        args: launchArgs
+      });
+    }
+  } catch (launchErr) {
+    console.warn('[Browser Launch fallback]:', launchErr.message);
+    persistentBrowser = await chromium.launch({
+      headless: true,
+      args: launchArgs
+    });
+  }
 
   persistentContext = await persistentBrowser.newContext({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
