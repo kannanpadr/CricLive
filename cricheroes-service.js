@@ -89,6 +89,8 @@ function parseUrlMetadata(url) {
   return metadata;
 }
 
+let isScrapeBusy = false;
+
 /**
  * Ensures a single persistent browser page is running
  */
@@ -99,13 +101,13 @@ async function getPersistentPage(targetUrl) {
     try {
       if (currentActiveUrl === targetUrl) {
         // CricHeroes updates live via internal SSE / WebSockets.
-        // Only perform a gentle reload if over 45s have passed without updates.
+        // Only perform a gentle reload if over 60s have passed without updates.
         const now = Date.now();
-        if (now - lastReloadTime > 45000) {
+        if (now - lastReloadTime > 60000) {
           lastReloadTime = now;
           try {
-            await persistentPage.reload({ waitUntil: 'domcontentloaded', timeout: 15000 });
-            await persistentPage.waitForTimeout(2000);
+            await persistentPage.reload({ waitUntil: 'commit', timeout: 25000 });
+            await persistentPage.waitForTimeout(3000);
           } catch (reErr) {
             console.warn('[Gentle reload skipped]:', reErr.message);
           }
@@ -114,7 +116,7 @@ async function getPersistentPage(targetUrl) {
       } else {
         currentActiveUrl = targetUrl;
         lastReloadTime = Date.now();
-        await persistentPage.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+        await persistentPage.goto(targetUrl, { waitUntil: 'commit', timeout: 35000 });
         try {
           await persistentPage.waitForFunction(() => {
             const canvases = document.querySelectorAll('canvas');
@@ -122,9 +124,9 @@ async function getPersistentPage(targetUrl) {
               const t = c.getAttribute('data-canvas-text');
               return t && t.includes('/');
             });
-          }, { timeout: 9000 });
+          }, { timeout: 12000 });
         } catch (_) {
-          await persistentPage.waitForTimeout(3000);
+          await persistentPage.waitForTimeout(4000);
         }
         return persistentPage;
       }
@@ -136,13 +138,14 @@ async function getPersistentPage(targetUrl) {
     }
   }
 
-  // Launch persistent browser with stealth & anti-throttling flags
+  // Launch persistent browser with stealth & anti-throttling flags optimized for Docker
   const launchArgs = [
     '--disable-blink-features=AutomationControlled',
     '--no-sandbox',
     '--disable-setuid-sandbox',
     '--disable-dev-shm-usage',
-    '--disable-web-security',
+    '--disable-gpu',
+    '--no-zygote',
     '--disable-background-timer-throttling',
     '--disable-backgrounding-occluded-windows',
     '--disable-renderer-backgrounding'
@@ -176,7 +179,7 @@ async function getPersistentPage(targetUrl) {
   }
 
   persistentContext = await persistentBrowser.newContext({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
     viewport: { width: 1400, height: 900 }
   });
 
@@ -195,7 +198,7 @@ async function getPersistentPage(targetUrl) {
   });
 
   currentActiveUrl = targetUrl;
-  await persistentPage.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+  await persistentPage.goto(targetUrl, { waitUntil: 'commit', timeout: 35000 });
   try {
     await persistentPage.waitForFunction(() => {
       const canvases = document.querySelectorAll('canvas');
@@ -203,9 +206,9 @@ async function getPersistentPage(targetUrl) {
         const t = c.getAttribute('data-canvas-text');
         return t && t.includes('/');
       });
-    }, { timeout: 9000 });
+    }, { timeout: 12000 });
   } catch (_) {
-    await persistentPage.waitForTimeout(3000);
+    await persistentPage.waitForTimeout(4000);
   }
 
   return persistentPage;
@@ -599,6 +602,11 @@ async function scrapeCricHeroesUrl(url) {
     };
   }
 
+  while (isScrapeBusy) {
+    await new Promise(r => setTimeout(r, 400));
+  }
+  isScrapeBusy = true;
+
   try {
     let pageUrl = url.trim();
     if (pageUrl.endsWith('/scorecard')) {
@@ -706,6 +714,8 @@ async function scrapeCricHeroesUrl(url) {
       recentBalls: [],
       matchResult: null
     };
+  } finally {
+    isScrapeBusy = false;
   }
 }
 

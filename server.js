@@ -619,8 +619,10 @@ function swapStrikers() {
 // Background auto URL syncer if enabled
 let isScrapingInProgress = false;
 function startAutoSync() {
+  if (global.autoSyncTimeout) clearTimeout(global.autoSyncTimeout);
   if (global.autoSyncInterval) clearInterval(global.autoSyncInterval);
-  global.autoSyncInterval = setInterval(async () => {
+
+  const runSync = async () => {
     if (matchState.autoUrlSync && matchState.matchUrl && !isScrapingInProgress) {
       isScrapingInProgress = true;
       try {
@@ -644,7 +646,11 @@ function startAutoSync() {
         isScrapingInProgress = false;
       }
     }
-  }, matchState.pollingInterval * 1000);
+    const intervalSec = Math.max(5, matchState.pollingInterval || 5);
+    global.autoSyncTimeout = setTimeout(runSync, intervalSec * 1000);
+  };
+
+  global.autoSyncTimeout = setTimeout(runSync, 2000);
 }
 
 // Stale data detection: mark stale if no update received for > 25 seconds
