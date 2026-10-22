@@ -169,12 +169,12 @@ body.pos-top .overlay-container {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 1px 7px;
+  padding: 0px 4px;
   border-radius: 8px;
   background: rgba(16, 185, 129, 0.16);
   border: 1px solid rgba(16, 185, 129, 0.4);
   color: #6ee7b7;
-  font-size: 9px;
+  font-size: 7px;
   font-weight: 800;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -895,7 +895,7 @@ body.layout-compact .team-name {
 .overlay-controls {
   position: fixed;
   top: 10px;
-  right: 10px;
+  left: 10px;
   z-index: 9999;
   background: rgba(10, 18, 32, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -952,45 +952,97 @@ body.layout-compact .team-name {
   font-size: 12px;
 }
 
+.ctrl-select {
+  background: #13243f;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #38bdf8;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
 .ctrl-floating-toggle {
   position: fixed;
   top: 10px;
-  right: 10px;
+  left: 10px;
   z-index: 9998;
-  background: rgba(10, 18, 32, 0.85);
-  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(10, 18, 32, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #38bdf8;
   border-radius: 20px;
-  padding: 4px 10px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+  display: block;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transition: all 0.15s ease;
+}
+
+.ctrl-floating-toggle:hover {
+  background: #087cff;
+  color: #ffffff;
+  border-color: #38bdf8;
+}
+
+.ctrl-back-score-btn {
+  position: fixed;
+  top: 44px;
+  left: 10px;
+  z-index: 9998;
+  background: rgba(10, 18, 32, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f1f5f9;
+  border-radius: 8px;
+  padding: 4px 9px;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   pointer-events: auto;
   backdrop-filter: blur(8px);
-  display: none;
+  display: block;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transition: all 0.15s ease;
+}
+
+.ctrl-back-score-btn:hover {
+  background: #087cff;
+  color: #ffffff;
+  border-color: #38bdf8;
 }
 </style>
 </head>
 <body class="layout-mini">
 
-<!-- FLOATING CONTROLS FOR STREAMER / OPERATOR -->
-<div class="overlay-controls" id="overlayControls">
+<!-- FLOATING CONTROLS FOR STREAMER / OPERATOR (Left Side) -->
+<div class="overlay-controls" id="overlayControls" style="display:none;">
   <span class="ctrl-label">📐 Size:</span>
-  <button class="ctrl-btn" id="btnSizeCompact" onclick="setOverlaySize('compact', true)" title="Score only (Minimal - Best for streaming)">Score Only</button>
   <button class="ctrl-btn active" id="btnSizeMini" onclick="setOverlaySize('mini', true)" title="Slim broadcast bar with batters/bowler">Slim Bar</button>
   <button class="ctrl-btn" id="btnSizeNormal" onclick="setOverlaySize('normal', true)" title="Full card">Full</button>
 
   <span style="color:rgba(255,255,255,0.25)">|</span>
   <span class="ctrl-label">🔍 Scale:</span>
-  <button class="ctrl-btn" id="btnScaleSmall" onclick="setOverlayScale(0.70)" title="70% compact">70%</button>
+  <select class="ctrl-select" id="scaleSelect" onchange="setOverlayScale(this.value)">
+    <option value="0.78" selected>78%</option>
+    <option value="0.90">90%</option>
+  </select>
   <button class="ctrl-btn active" id="btnScaleMed" onclick="setOverlayScale(0.78)" title="78% default">78%</button>
-  <button class="ctrl-btn" id="btnScaleFull" onclick="setOverlayScale(1.0)" title="100% large">100%</button>
+  <button class="ctrl-btn" id="btnScaleFull" onclick="setOverlayScale(0.90)" title="90% large">90%</button>
 
   <span style="color:rgba(255,255,255,0.25)">|</span>
   <button class="ctrl-btn" id="btnTogglePos" onclick="toggleOverlayPos()">↕ Top/Bottom</button>
-  <button class="ctrl-btn close" onclick="hideControls()" title="Hide toolbar">✕</button>
+  <button class="ctrl-btn close" onclick="hideControls()" title="Close overlay controls">✕</button>
 </div>
-<button class="ctrl-floating-toggle" id="btnFloatingToggle" onclick="showControls()">⚙ Size</button>
+
+<!-- DEFAULT LEFT SIDE SETTING ICON -->
+<button class="ctrl-floating-toggle" id="btnFloatingToggle" onclick="showControls()" title="Overlay Settings">⚙</button>
+<!-- BACK SCORE BUTTON DISPLAYED UNDER LEFT SIDE SETTING BUTTON -->
+<button class="ctrl-back-score-btn" id="btnBackScore" onclick="goBackToScore()" title="Back to Score Control Panel">← Score</button>
 
 <!-- MAIN OVERLAY CONTAINER -->
 <div class="overlay-container" id="overlayContainer">
@@ -1352,13 +1404,25 @@ function setOverlaySize(size, isUserAction = false) {
 function setOverlayScale(scale) {
   const val = parseFloat(scale) || 0.78;
   document.documentElement.style.setProperty("--overlay-scale", val.toString());
-  const bSmall = $("btnScaleSmall");
   const bMed = $("btnScaleMed");
   const bFull = $("btnScaleFull");
-  if (bSmall) bSmall.classList.toggle("active", val <= 0.72);
-  if (bMed) bMed.classList.toggle("active", val > 0.72 && val < 0.95);
-  if (bFull) bFull.classList.toggle("active", val >= 0.95);
+  const sel = $("scaleSelect");
+  if (bMed) bMed.classList.toggle("active", Math.abs(val - 0.78) < 0.05);
+  if (bFull) bFull.classList.toggle("active", Math.abs(val - 0.90) < 0.05);
+  if (sel) sel.value = val >= 0.85 ? "0.90" : "0.78";
   try { localStorage.setItem("overlay_scale_pref", val.toString()); } catch (e) {}
+}
+
+function goBackToScore() {
+  if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.backToControl === 'function') {
+    window.AndroidScoreBridge.backToControl();
+  } else if (window.location.protocol === 'file:') {
+    window.location.href = 'index.html';
+  } else if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    window.location.href = '/';
+  }
 }
 
 function toggleOverlayPos() {

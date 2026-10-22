@@ -449,6 +449,20 @@ fun CktAppScreen(
                                         syncer.stopSync()
                                     }
                                 }
+
+                                @JavascriptInterface
+                                fun backToControl() {
+                                    Handler(Looper.getMainLooper()).post {
+                                        activeMode = AppMode.CONTROL
+                                        val baseUrl = currentUrl.trimEnd('/')
+                                        val target = if (baseUrl.startsWith("file://")) {
+                                            "file:///android_asset/web/index.html"
+                                        } else {
+                                            "$baseUrl/"
+                                        }
+                                        webViewRef?.loadUrl(target)
+                                    }
+                                }
                             }, "AndroidScoreBridge")
 
                             webChromeClient = object : WebChromeClient() {
@@ -851,26 +865,12 @@ fun formatYouTubeRtmpEndpoint(serverUrl: String, streamKey: String): String {
         cleanKey = ""
     }
 
-    if (base.contains("youtube.com", ignoreCase = true)) {
-        base = base.replace("rtmp://", "rtmps://", ignoreCase = true)
-            .replace("a.rtmp.youtube.com", "a.rtmps.youtube.com", ignoreCase = true)
-            .replace("b.rtmp.youtube.com", "b.rtmps.youtube.com", ignoreCase = true)
-
-        // Ensure port 443 is explicitly included for RTMPS if no port is specified
-        if (base.startsWith("rtmps://", ignoreCase = true)) {
-            val withoutScheme = base.substring(8)
-            val slashIdx = withoutScheme.indexOf('/')
-            val hostPart = if (slashIdx != -1) withoutScheme.substring(0, slashIdx) else withoutScheme
-            val pathPart = if (slashIdx != -1) withoutScheme.substring(slashIdx) else ""
-
-            if (!hostPart.contains(':')) {
-                base = "rtmps://$hostPart:443$pathPart"
-            }
-        }
+    if (base.isEmpty()) {
+        base = "rtmp://a.rtmp.youtube.com/live2"
     }
 
     if (!base.startsWith("rtmp://", ignoreCase = true) && !base.startsWith("rtmps://", ignoreCase = true)) {
-        base = "rtmps://$base"
+        base = "rtmp://$base"
     }
 
     base = base.trimEnd('/')
@@ -883,25 +883,6 @@ fun formatYouTubeRtmpEndpoint(serverUrl: String, streamKey: String): String {
     }
 }
 
-/**
- * Opens YouTube Live Studio in Chrome Custom Tabs (or default browser).
- * Google requires Custom Tabs for Google/YouTube Sign-In to prevent the
- * "This browser or app may not be secure" error on Android WebViews.
- */
-fun launchYouTubeStudio(context: Context) {
-    val studioUrl = "https://studio.youtube.com/livestreaming"
-    try {
-        val customTabsIntent = CustomTabsIntent.Builder()
-            .setShowTitle(true)
-            .build()
-        customTabsIntent.launchUrl(context, Uri.parse(studioUrl))
-    } catch (_: Exception) {
-        val browserIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(studioUrl)).apply {
-            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        context.startActivity(browserIntent)
-    }
-}
 
 /**
  * CAMERA STREAM OVERLAY SCREEN WITH YOUTUBE LIVE INTEGRATION
@@ -962,24 +943,16 @@ fun CameraStreamOverlayScreen(
     var streamKey by remember { mutableStateOf(streamPrefs.getString("yt_stream_key", "") ?: "") }
     var autoDetectedKeyNotice by remember { mutableStateOf<String?>(null) }
     
-    val defaultRtmpEndpoint = "rtmps://a.rtmps.youtube.com:443/live2"
+    val defaultRtmpEndpoint = "rtmp://a.rtmp.youtube.com/live2"
     var initialRtmpUrl = streamPrefs.getString("yt_rtmp_url", defaultRtmpEndpoint) ?: defaultRtmpEndpoint
-    if (initialRtmpUrl.contains("youtube.com", ignoreCase = true)) {
-        if (initialRtmpUrl.startsWith("rtmp://", ignoreCase = true)) {
-            initialRtmpUrl = initialRtmpUrl.replace("rtmp://", "rtmps://", ignoreCase = true)
-                .replace("a.rtmp.youtube.com", "a.rtmps.youtube.com", ignoreCase = true)
-        }
-        if (initialRtmpUrl.startsWith("rtmps://", ignoreCase = true) && !initialRtmpUrl.substring(8).contains(":")) {
-            val slashIdx = initialRtmpUrl.indexOf('/', startIndex = 8)
-            initialRtmpUrl = if (slashIdx != -1) {
-                initialRtmpUrl.substring(0, slashIdx) + ":443" + initialRtmpUrl.substring(slashIdx)
-            } else {
-                "$initialRtmpUrl:443"
-            }
-        }
+    if (initialRtmpUrl.contains("443") || initialRtmpUrl.startsWith("rtmps://", ignoreCase = true)) {
+        initialRtmpUrl = initialRtmpUrl.replace("rtmps://", "rtmp://", ignoreCase = true)
+            .replace(":443", "")
+            .replace("a.rtmps.youtube.com", "a.rtmp.youtube.com", ignoreCase = true)
+            .replace("b.rtmps.youtube.com", "b.rtmp.youtube.com", ignoreCase = true)
     }
     var rtmpServerUrl by remember { mutableStateOf(initialRtmpUrl) }
-    var selectedQuality by remember { mutableStateOf(streamPrefs.getString("yt_quality", "720p") ?: "720p") }
+    var selectedQuality by remember { mutableStateOf(streamPrefs.getString("yt_quality", "1080p") ?: "1080p") }
     var isMicAudioEnabled by remember { mutableStateOf(streamPrefs.getBoolean("yt_audio_enabled", true)) }
     var isKeyVisible by remember { mutableStateOf(false) }
     var streamKeyValidationError by remember { mutableStateOf<String?>(null) }
@@ -1014,9 +987,9 @@ fun CameraStreamOverlayScreen(
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             val (w, h, bitrate) = when (selectedQuality) {
-                "1080p" -> Triple(1920, 1080, 4500 * 1024)
-                "480p" -> Triple(854, 480, 1200 * 1024)
-                else -> Triple(1280, 720, 2500 * 1024)
+                "2160p", "21604k", "4K" -> Triple(3840, 2160, 18000 * 1024)
+                "1440p", "1440QHD", "QHD" -> Triple(2560, 1440, 9000 * 1024)
+                else -> Triple(1920, 1080, 5000 * 1024)
             }
 
             val fullUrl = formatYouTubeRtmpEndpoint(rtmpServerUrl, streamKey)
@@ -1121,6 +1094,14 @@ fun CameraStreamOverlayScreen(
                         mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         cacheMode = WebSettings.LOAD_DEFAULT
                     }
+                    addJavascriptInterface(object {
+                        @JavascriptInterface
+                        fun backToControl() {
+                            Handler(Looper.getMainLooper()).post {
+                                onBackToControl()
+                            }
+                        }
+                    }, "AndroidScoreBridge")
                     webChromeClient = object : WebChromeClient() {
                         override fun onPermissionRequest(request: PermissionRequest?) {
                             request?.grant(request.resources)
@@ -1222,14 +1203,14 @@ fun CameraStreamOverlayScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
-                                        .size(7.dp)
+                                        .size(5.dp)
                                         .clip(CircleShape)
                                         .background(Color.White)
                                 )
-                                Spacer(modifier = Modifier.width(5.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
                                 Text(
-                                    text = "LIVE ${formatDuration(streamState.durationSeconds)} (${streamState.bitrateKbps}k)",
-                                    fontSize = 11.sp,
+                                    text = "LIVE ${formatDuration(streamState.durationSeconds)}",
+                                    fontSize = 9.sp,
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -1239,13 +1220,13 @@ fun CameraStreamOverlayScreen(
                         // CONNECTING STATE
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(6.dp))
                                 .background(Color(0xFFD97706))
-                                .padding(horizontal = 9.dp, vertical = 5.dp)
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
                             Text(
                                 text = "⏳ Connecting...",
-                                fontSize = 11.sp,
+                                fontSize = 9.sp,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1272,38 +1253,6 @@ fun CameraStreamOverlayScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-                        }
-                    }
-
-                    // Flip Camera (Back / Front)
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color(0xCC071529))
-                            .clickable {
-                                lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-                                    CameraSelector.LENS_FACING_FRONT
-                                } else {
-                                    CameraSelector.LENS_FACING_BACK
-                                }
-                            }
-                            .padding(8.dp)
-                    ) {
-                        Text("🔄", fontSize = 13.sp)
-                    }
-
-                    // YouTube Studio Live Control / Sign In Pill
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xCC071529))
-                            .clickable { launchYouTubeStudio(context) }
-                            .padding(horizontal = 8.dp, vertical = 6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("📺", fontSize = 11.sp)
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text("Studio", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -1524,48 +1473,6 @@ fun CameraStreamOverlayScreen(
                         fontSize = 12.sp,
                         color = Color(0xFFA6BAD4)
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // YOUTUBE SIGN-IN & STUDIO CARD
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                launchYouTubeStudio(context)
-                            }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFFF0000)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("▶", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Sign In with YouTube / Open Studio",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
-                                Text(
-                                    text = "Opens secure browser to log in & copy Stream Key",
-                                    color = Color(0xFFA6BAD4),
-                                    fontSize = 10.sp
-                                )
-                            }
-                            Text("➔", color = Color(0xFF00C7FF), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
 
                     if (autoDetectedKeyNotice != null) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -1668,7 +1575,7 @@ fun CameraStreamOverlayScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // RTMP Server URL with Presets
+                    // RTMP Server URL (Editable Text Field, default rtmp://a.rtmp.youtube.com/live2)
                     Text(
                         text = "RTMP Server Endpoint",
                         fontSize = 11.sp,
@@ -1678,38 +1585,25 @@ fun CameraStreamOverlayScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val isPrimary = rtmpServerUrl.contains("a.rtmps")
-                        val isBackup = rtmpServerUrl.contains("b.rtmps")
-                        val isLegacy = rtmpServerUrl.startsWith("rtmp://")
-
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (isPrimary) Color(0xFF00C7FF) else Color(0x22FFFFFF))
-                                .clickable { rtmpServerUrl = "rtmps://a.rtmps.youtube.com:443/live2" }
-                                .padding(horizontal = 6.dp, vertical = 4.dp)
+                                .background(if (rtmpServerUrl == "rtmp://a.rtmp.youtube.com/live2") Color(0xFF00C7FF) else Color(0x22FFFFFF))
+                                .clickable { rtmpServerUrl = "rtmp://a.rtmp.youtube.com/live2" }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text("Primary 443", fontSize = 10.sp, color = if (isPrimary) Color(0xFF071529) else Color.White, fontWeight = FontWeight.Bold)
+                            Text("Default RTMP", fontSize = 10.sp, color = if (rtmpServerUrl == "rtmp://a.rtmp.youtube.com/live2") Color(0xFF071529) else Color.White, fontWeight = FontWeight.Bold)
                         }
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (isBackup) Color(0xFF00C7FF) else Color(0x22FFFFFF))
-                                .clickable { rtmpServerUrl = "rtmps://b.rtmps.youtube.com:443/live2?backup=1" }
-                                .padding(horizontal = 6.dp, vertical = 4.dp)
+                                .background(if (rtmpServerUrl.contains("b.rtmp")) Color(0xFF00C7FF) else Color(0x22FFFFFF))
+                                .clickable { rtmpServerUrl = "rtmp://b.rtmp.youtube.com/live2?backup=1" }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text("Backup 443", fontSize = 10.sp, color = if (isBackup) Color(0xFF071529) else Color.White, fontWeight = FontWeight.Bold)
-                        }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (isLegacy) Color(0xFF00C7FF) else Color(0x22FFFFFF))
-                                .clickable { rtmpServerUrl = "rtmp://a.rtmp.youtube.com:1935/live2" }
-                                .padding(horizontal = 6.dp, vertical = 4.dp)
-                        ) {
-                            Text("Legacy 1935", fontSize = 10.sp, color = if (isLegacy) Color(0xFF071529) else Color.White, fontWeight = FontWeight.Bold)
+                            Text("Backup RTMP", fontSize = 10.sp, color = if (rtmpServerUrl.contains("b.rtmp")) Color(0xFF071529) else Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -1718,7 +1612,7 @@ fun CameraStreamOverlayScreen(
                         onValueChange = { rtmpServerUrl = it },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        placeholder = { Text("rtmps://a.rtmps.youtube.com:443/live2", fontSize = 12.sp) },
+                        placeholder = { Text("rtmp://a.rtmp.youtube.com/live2", fontSize = 12.sp) },
                         trailingIcon = {
                             Text(
                                 text = "📋 Paste",
@@ -1740,7 +1634,7 @@ fun CameraStreamOverlayScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Stream Quality Selector
+                    // Stream Quality Selector: 1080FHD, 1440QHD, 21604k
                     Text(
                         text = "Stream Quality / Resolution",
                         fontSize = 11.sp,
@@ -1753,25 +1647,25 @@ fun CameraStreamOverlayScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         QualityOptionChip(
-                            label = "720p HD",
-                            subtext = "2.5M",
-                            isSelected = selectedQuality == "720p"
-                        ) {
-                            selectedQuality = "720p"
-                        }
-                        QualityOptionChip(
                             label = "1080p FHD",
-                            subtext = "4.5M",
+                            subtext = "5.0M",
                             isSelected = selectedQuality == "1080p"
                         ) {
                             selectedQuality = "1080p"
                         }
                         QualityOptionChip(
-                            label = "480p SD",
-                            subtext = "1.2M",
-                            isSelected = selectedQuality == "480p"
+                            label = "1440p QHD",
+                            subtext = "9.0M",
+                            isSelected = selectedQuality == "1440p"
                         ) {
-                            selectedQuality = "480p"
+                            selectedQuality = "1440p"
+                        }
+                        QualityOptionChip(
+                            label = "2160p 4K",
+                            subtext = "18M",
+                            isSelected = selectedQuality == "2160p"
+                        ) {
+                            selectedQuality = "2160p"
                         }
                     }
 
@@ -1817,7 +1711,7 @@ fun CameraStreamOverlayScreen(
                             .padding(8.dp)
                     ) {
                         Text(
-                            text = "💡 Tip: Tap 'Sign In with YouTube / Open Studio' above to log in, view live stream controls, and auto-paste your stream key.",
+                            text = "💡 Tip: Paste your YouTube Stream Key to start broadcast. Your camera video and live scoreboard will be mixed and streamed in high resolution.",
                             fontSize = 10.sp,
                             color = Color(0xFFA6BAD4),
                             lineHeight = 14.sp
