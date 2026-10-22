@@ -179,24 +179,9 @@ class RtmpStreamService : Service(), ConnectChecker {
         rtmpDisplay = RtmpDisplay(baseContext, true, this)
         val display = rtmpDisplay ?: return
 
-        // Auto-sanitize YouTube RTMP endpoint to secure RTMPS with explicit port 443
         var targetEndpoint = endpoint.trim()
-        if (targetEndpoint.contains("youtube.com", ignoreCase = true)) {
-            targetEndpoint = targetEndpoint.replace("rtmp://", "rtmps://", ignoreCase = true)
-            targetEndpoint = targetEndpoint.replace("a.rtmp.youtube.com", "a.rtmps.youtube.com", ignoreCase = true)
-            targetEndpoint = targetEndpoint.replace("b.rtmp.youtube.com", "b.rtmps.youtube.com", ignoreCase = true)
-
-            // Guarantee explicit port 443 for YouTube RTMPS
-            if (targetEndpoint.startsWith("rtmps://", ignoreCase = true)) {
-                val withoutScheme = targetEndpoint.substring(8)
-                val slashIdx = withoutScheme.indexOf('/')
-                val hostPart = if (slashIdx != -1) withoutScheme.substring(0, slashIdx) else withoutScheme
-                val pathPart = if (slashIdx != -1) withoutScheme.substring(slashIdx) else ""
-
-                if (!hostPart.contains(':')) {
-                    targetEndpoint = "rtmps://$hostPart:443$pathPart"
-                }
-            }
+        if (targetEndpoint.isEmpty()) {
+            targetEndpoint = "rtmp://a.rtmp.youtube.com/live2"
         }
 
         _streamState.value = StreamState(
