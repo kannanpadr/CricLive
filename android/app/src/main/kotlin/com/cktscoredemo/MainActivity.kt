@@ -1164,6 +1164,11 @@ fun CameraStreamOverlayScreen(
             }
         }
 
+        // Hardware / Gesture Back Handler to return to control screen
+        BackHandler {
+            onBackToControl()
+        }
+
         // LAYER 3: FLOATING CAMERA & STREAM CONTROLS (Top Bar)
         if (showControls) {
             Row(
@@ -1171,20 +1176,9 @@ fun CameraStreamOverlayScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 10.dp, vertical = 10.dp)
                     .align(Alignment.TopCenter),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Exit to Control Panel
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xCC071529))
-                        .clickable { onBackToControl() }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text("← Scorer", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                }
-
                 // Streaming & Camera Action Pills
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),

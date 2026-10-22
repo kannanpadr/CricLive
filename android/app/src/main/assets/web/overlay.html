@@ -989,32 +989,6 @@ body.layout-compact .team-name {
   color: #ffffff;
   border-color: #38bdf8;
 }
-
-.ctrl-back-score-btn {
-  position: fixed;
-  top: 44px;
-  left: 10px;
-  z-index: 9998;
-  background: rgba(10, 18, 32, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #f1f5f9;
-  border-radius: 8px;
-  padding: 4px 9px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  pointer-events: auto;
-  backdrop-filter: blur(8px);
-  display: block;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  transition: all 0.15s ease;
-}
-
-.ctrl-back-score-btn:hover {
-  background: #087cff;
-  color: #ffffff;
-  border-color: #38bdf8;
-}
 </style>
 </head>
 <body class="layout-mini">
@@ -1039,10 +1013,8 @@ body.layout-compact .team-name {
   <button class="ctrl-btn close" onclick="hideControls()" title="Close overlay controls">✕</button>
 </div>
 
-<!-- DEFAULT LEFT SIDE SETTING ICON -->
+<!-- DEFAULT LEFT SIDE SETTING ICON ONLY -->
 <button class="ctrl-floating-toggle" id="btnFloatingToggle" onclick="showControls()" title="Overlay Settings">⚙</button>
-<!-- BACK SCORE BUTTON DISPLAYED UNDER LEFT SIDE SETTING BUTTON -->
-<button class="ctrl-back-score-btn" id="btnBackScore" onclick="goBackToScore()" title="Back to Score Control Panel">← Score</button>
 
 <!-- MAIN OVERLAY CONTAINER -->
 <div class="overlay-container" id="overlayContainer">
