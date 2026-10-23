@@ -12,6 +12,9 @@ import android.os.Looper
 import org.json.JSONObject
 import org.json.JSONTokener
 import android.view.ViewGroup
+import android.view.MotionEvent
+import android.view.GestureDetector
+import android.view.ScaleGestureDetector
 import android.content.ClipboardManager
 import android.net.http.SslError
 import android.webkit.ConsoleMessage
@@ -1174,13 +1177,55 @@ fun CameraStreamOverlayScreen(
             }
         )
 
-        // LAYER 2: TRANSPARENT CRICKET SCOREBOARD OVERLAY (Foreground)
+        // LAYER 2: TRANSPARENT CRICKET SCOREBOARD OVERLAY WITH CAMERA GESTURES
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
+                val scaleGestureDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    override fun onScale(detector: ScaleGestureDetector): Boolean {
+                        if (!isScreenLocked && camera != null) {
+                            val factor = detector.scaleFactor
+                            val target = (currentZoomRatio * factor).coerceIn(minZoomRatio, maxZoomRatio)
+                            currentZoomRatio = target
+                            camera?.cameraControl?.setZoomRatio(target)
+                            return true
+                        }
+                        return false
+                    }
+                })
+
+                val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                        if (!isScreenLocked && camera != null && previewView != null) {
+                            val pv = previewView ?: return false
+                            val factory = pv.meteringPointFactory
+                            val point = factory.createPoint(e.x, e.y)
+                            focusRingOffset = Offset(e.x, e.y)
+                            triggerHapticFeedback(ctx)
+
+                            if (isFocusLocked) {
+                                val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                                    .disableAutoCancel()
+                                    .build()
+                                camera?.cameraControl?.startFocusAndMetering(action)
+                                focusRingColor = Color(0xFFFFC107)
+                                focusStatusToast = "🔒 Focus Locked at point"
+                            } else {
+                                val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                                    .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                                    .build()
+                                camera?.cameraControl?.startFocusAndMetering(action)
+                                focusRingColor = Color(0xFF38BDF8)
+                                focusStatusToast = "🎯 Focused"
+                            }
+                            return true
+                        }
+                        return false
+                    }
+                })
+
                 WebView(ctx).apply {
                     setBackgroundColor(0x00000000) // Transparent background
-                    setOnTouchListener { _, _ -> false } // Pass gestures through to camera
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
@@ -1216,73 +1261,52 @@ fun CameraStreamOverlayScreen(
                             handler?.proceed()
                         }
                     }
+
+                    // Smart touch routing:
+                    // If touch is in the top-left area (overlay setting icon & controls),
+                    // allow WebView to process clicks and interactions!
+                    // Outside that area: handle tap-to-focus and pinch-zoom on the camera preview!
+                    setOnTouchListener { _, event ->
+                        val density = ctx.resources.displayMetrics.density
+                        val controlsWidthPx = 460f * density
+                        val controlsHeightPx = 80f * density
+
+                        val isNearOverlayControls = event.x <= controlsWidthPx && event.y <= controlsHeightPx
+                        if (isNearOverlayControls) {
+                            // Let WebView handle the click on the left overlay control setting button!
+                            return@setOnTouchListener false
+                        }
+
+                        // Feed to gesture detectors for pinch-to-zoom & tap-to-focus
+                        val scaled = scaleGestureDetector.onTouchEvent(event)
+                        val tapped = gestureDetector.onTouchEvent(event)
+                        scaled || tapped
+                    }
+
                     loadUrl(overlayUrl)
                 }
             }
         )
 
-        // LAYER 2.5: GESTURE INTERCEPTOR (PINCH-TO-ZOOM & TAP-TO-FOCUS / LOCK)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(camera, minZoomRatio, maxZoomRatio, isScreenLocked) {
-                    detectTransformGestures { _, _, zoomChange, _ ->
-                        if (!isScreenLocked && zoomChange != 1.0f && camera != null) {
-                            val target = (currentZoomRatio * zoomChange).coerceIn(minZoomRatio, maxZoomRatio)
-                            currentZoomRatio = target
-                            camera?.cameraControl?.setZoomRatio(target)
-                        }
-                    }
-                }
-                .pointerInput(camera, isFocusLocked, isScreenLocked, previewView) {
-                    detectTapGestures(
-                        onTap = { offset ->
-                            if (!isScreenLocked && camera != null && previewView != null) {
-                                val factory = previewView?.meteringPointFactory ?: return@detectTapGestures
-                                val point = factory.createPoint(offset.x, offset.y)
-                                focusRingOffset = offset
-                                triggerHapticFeedback(context)
-
-                                if (isFocusLocked) {
-                                    val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
-                                        .disableAutoCancel()
-                                        .build()
-                                    camera?.cameraControl?.startFocusAndMetering(action)
-                                    focusRingColor = Color(0xFFFFC107)
-                                    focusStatusToast = "🔒 Focus Locked at point"
-                                } else {
-                                    val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
-                                        .setAutoCancelDuration(3, TimeUnit.SECONDS)
-                                        .build()
-                                    camera?.cameraControl?.startFocusAndMetering(action)
-                                    focusRingColor = Color(0xFF38BDF8)
-                                    focusStatusToast = "🎯 Focused"
-                                }
-                            }
-                        }
-                    )
-                }
-        ) {
-            // ANIMATED BROADCAST FOCUS TARGET RING
-            if (focusRingOffset != null) {
-                val offset = focusRingOffset!!
-                val density = LocalDensity.current
-                val xDp = with(density) { (offset.x - 32.dp.toPx()).toDp() }
-                val yDp = with(density) { (offset.y - 32.dp.toPx()).toDp() }
+        // ANIMATED BROADCAST FOCUS TARGET RING
+        if (focusRingOffset != null) {
+            val offset = focusRingOffset!!
+            val density = LocalDensity.current
+            val xDp = with(density) { (offset.x - 32.dp.toPx()).toDp() }
+            val yDp = with(density) { (offset.y - 32.dp.toPx()).toDp() }
+            Box(
+                modifier = Modifier
+                    .offset(x = xDp, y = yDp)
+                    .size(64.dp)
+                    .border(BorderStroke(2.dp, focusRingColor), RoundedCornerShape(10.dp))
+            ) {
                 Box(
                     modifier = Modifier
-                        .offset(x = xDp, y = yDp)
-                        .size(64.dp)
-                        .border(BorderStroke(2.dp, focusRingColor), RoundedCornerShape(10.dp))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(focusRingColor)
-                            .align(Alignment.Center)
-                    )
-                }
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(focusRingColor)
+                        .align(Alignment.Center)
+                )
             }
         }
 
