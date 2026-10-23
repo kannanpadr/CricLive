@@ -979,6 +979,7 @@ fun CameraStreamOverlayScreen(
     var camera by remember { mutableStateOf<Camera?>(null) }
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var showControls by remember { mutableStateOf(true) }
+    var isOverlayControlsOpen by remember { mutableStateOf(false) }
 
     // Camera Zoom States
     var currentZoomRatio by remember { mutableFloatStateOf(1f) }
@@ -1247,6 +1248,13 @@ fun CameraStreamOverlayScreen(
                                 onBackToControl()
                             }
                         }
+
+                        @JavascriptInterface
+                        fun setControlsExpanded(expanded: Boolean) {
+                            Handler(Looper.getMainLooper()).post {
+                                isOverlayControlsOpen = expanded
+                            }
+                        }
                     }, "AndroidScoreBridge")
                     webChromeClient = object : WebChromeClient() {
                         override fun onPermissionRequest(request: PermissionRequest?) {
@@ -1265,17 +1273,24 @@ fun CameraStreamOverlayScreen(
                     }
 
                     // Smart touch routing:
-                    // If touch is in the top-left area (overlay setting icon & controls),
+                    // If touch is in the overlay controls region (or when controls panel is open),
                     // allow WebView to process clicks and interactions!
                     // Outside that area: handle tap-to-focus and pinch-zoom on the camera preview!
-                    setOnTouchListener { _, event ->
+                    setOnTouchListener { v, event ->
                         val density = ctx.resources.displayMetrics.density
-                        val controlsWidthPx = 480f * density
-                        val controlsHeightPx = 90f * density
+                        // When overlay control panel is open, cover full panel bounds (up to 700dp and 120dp height)
+                        // When closed, cover top-left area for the floating gear icon
+                        val controlsWidthPx = if (isOverlayControlsOpen) {
+                            maxOf(700f * density, v.width * 0.85f)
+                        } else {
+                            // Generous top-left area so controls open reliably
+                            620f * density
+                        }
+                        val controlsHeightPx = if (isOverlayControlsOpen) 120f * density else 75f * density
 
                         val isNearOverlayControls = event.x <= controlsWidthPx && event.y <= controlsHeightPx
                         if (isNearOverlayControls) {
-                            // Let WebView handle the click on the left overlay control setting button!
+                            // Let WebView handle the click on the left overlay controls and close button!
                             return@setOnTouchListener false
                         }
 

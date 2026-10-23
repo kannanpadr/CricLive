@@ -924,18 +924,18 @@ body.layout-compact .team-name {
   top: 10px;
   left: 10px;
   z-index: 9999;
-  background: rgba(10, 18, 32, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(10, 18, 32, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 10px;
   padding: 6px 10px;
   display: flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
   pointer-events: auto;
-  opacity: 0.15;
-  transition: opacity 0.25s ease;
+  opacity: 1;
+  transition: opacity 0.2s ease;
 }
 
 .overlay-controls:hover, .overlay-controls.active {
@@ -972,11 +972,23 @@ body.layout-compact .team-name {
 }
 
 .ctrl-btn.close {
-  background: transparent;
-  border: 0;
-  color: #94a3b8;
-  padding: 2px 6px;
-  font-size: 12px;
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+}
+
+.ctrl-btn.close:hover, .ctrl-btn.close:active {
+  background: #ef4444;
+  color: #ffffff;
 }
 
 .ctrl-select {
@@ -1021,14 +1033,14 @@ body.layout-compact .team-name {
 <body class="layout-mini">
 
 <!-- FLOATING CONTROLS FOR STREAMER / OPERATOR (Left Side) -->
-<div class="overlay-controls" id="overlayControls" style="display:none;">
+<div class="overlay-controls active" id="overlayControls" style="display:none;">
   <span class="ctrl-label">📐 Size:</span>
-  <button class="ctrl-btn active" id="btnSizeMini" onclick="setOverlaySize('mini', true)" title="Slim broadcast bar with batters/bowler">Slim Bar</button>
+  <button class="ctrl-btn active" id="btnSizeMini" onclick="setOverlaySize('mini', true)" title="Slim broadcast bar with batters/bowler">Slim</button>
   <button class="ctrl-btn" id="btnSizeNormal" onclick="setOverlaySize('normal', true)" title="Full card">Full</button>
 
   <span style="color:rgba(255,255,255,0.25)">|</span>
   <span class="ctrl-label">🔍 Scale:</span>
-  <select class="ctrl-select" id="scaleSelect" onchange="setOverlayScale(this.value)">
+  <select class="ctrl-select" id="scaleSelect" onchange="setOverlayScale(this.value)" style="display:none;">
     <option value="0.78" selected>78%</option>
     <option value="0.90">90%</option>
   </select>
@@ -1036,8 +1048,8 @@ body.layout-compact .team-name {
   <button class="ctrl-btn" id="btnScaleFull" onclick="setOverlayScale(0.90)" title="90% large">90%</button>
 
   <span style="color:rgba(255,255,255,0.25)">|</span>
-  <button class="ctrl-btn" id="btnTogglePos" onclick="toggleOverlayPos()">↕ Top/Bottom</button>
-  <button class="ctrl-btn close" onclick="hideControls()" title="Close overlay controls">✕</button>
+  <button class="ctrl-btn" id="btnTogglePos" onclick="toggleOverlayPos()">↕ Pos</button>
+  <button class="ctrl-btn close" id="btnCloseControls" onclick="hideControls()" title="Close overlay controls">✕ Close</button>
 </div>
 
 <!-- DEFAULT LEFT SIDE SETTING ICON ONLY -->
@@ -1466,15 +1478,31 @@ function toggleOverlayPos() {
 function hideControls() {
   const c = $("overlayControls");
   const f = $("btnFloatingToggle");
-  if (c) c.style.display = "none";
+  if (c) {
+    c.style.display = "none";
+    c.classList.remove("active");
+  }
   if (f) f.style.display = "block";
+  try {
+    if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.setControlsExpanded === 'function') {
+      window.AndroidScoreBridge.setControlsExpanded(false);
+    }
+  } catch (e) {}
 }
 
 function showControls() {
   const c = $("overlayControls");
   const f = $("btnFloatingToggle");
-  if (c) c.style.display = "flex";
+  if (c) {
+    c.style.display = "flex";
+    c.classList.add("active");
+  }
   if (f) f.style.display = "none";
+  try {
+    if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.setControlsExpanded === 'function') {
+      window.AndroidScoreBridge.setControlsExpanded(true);
+    }
+  } catch (e) {}
 }
 
 function togglePreviewBg() {
