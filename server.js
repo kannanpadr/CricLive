@@ -327,6 +327,50 @@ app.get(['/api/score', '/score'], (req, res) => {
   res.json(getEnrichedState());
 });
 
+app.post(['/api/score', '/score'], (req, res) => {
+  if (req.body) {
+    pushHistory();
+    const data = req.body;
+    if (data.tournament) matchState.tournament = data.tournament;
+    if (data.venue) matchState.venue = data.venue;
+    if (data.runs !== undefined) {
+      const b = getBattingTeam();
+      if (b) b.score = Number(data.runs);
+    }
+    if (data.wickets !== undefined) {
+      const b = getBattingTeam();
+      if (b) b.wickets = Number(data.wickets);
+    }
+    if (data.overs !== undefined) {
+      const b = getBattingTeam();
+      if (b) b.overs = data.overs;
+    }
+    if (data.batting_team) {
+      const b = getBattingTeam();
+      if (b) b.name = data.batting_team;
+    }
+    if (data.bowling_team) {
+      const bo = getBowlingTeam();
+      if (bo) bo.name = data.bowling_team;
+    }
+    if (data.batters && Array.isArray(data.batters)) {
+      if (data.batters[0]) matchState.striker = { ...matchState.striker, ...data.batters[0] };
+      if (data.batters[1]) matchState.nonStriker = { ...matchState.nonStriker, ...data.batters[1] };
+    }
+    if (data.bowler) {
+      matchState.bowler = { ...matchState.bowler, ...data.bowler };
+    }
+    if (data.this_over && Array.isArray(data.this_over)) {
+      matchState.thisOver = data.this_over;
+    }
+    matchState.lastUpdated = new Date().toISOString();
+    recalculateStats();
+    res.json({ success: true, state: getEnrichedState() });
+  } else {
+    res.status(400).json({ error: "Missing body" });
+  }
+});
+
 // 2. AUTO-CONFIGURE FROM CRICHEROES FULL URL (FR-01, FR-02)
 app.post('/api/auto-configure', async (req, res) => {
   const { url } = req.body;

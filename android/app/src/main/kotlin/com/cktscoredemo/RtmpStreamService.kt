@@ -428,7 +428,7 @@ class RtmpStreamService : Service(), ConnectChecker {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "CKTScore YouTube Live Streaming",
+                "Cricket Live YT YouTube Live Streaming",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Foreground service notification for active YouTube RTMP live stream"
@@ -460,7 +460,7 @@ class RtmpStreamService : Service(), ConnectChecker {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("🔴 CKTScore — Live on YouTube")
+            .setContentTitle("🔴 Cricket Live YT — Live on YouTube")
             .setContentText(statusText)
             .setSmallIcon(android.R.drawable.presence_video_online)
             .setContentIntent(pendingIntent)

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CricHeroes Broadcast Overlay · Low-Profile Stream Edition</title>
+<title>Cricket Live YT Broadcast Overlay · Stream Edition</title>
 <style>
 :root {
   --blue: #087cff;
@@ -1427,6 +1427,9 @@ function setOverlaySize(size, isUserAction = false) {
     if (isUserAction) {
       localStorage.setItem("overlay_user_override", "1");
     }
+    if (broadcastSyncChannel) {
+      broadcastSyncChannel.postMessage({ type: 'OVERLAY_UI_CHANGE', payload: { size, isUserAction } });
+    }
   } catch (e) {}
 }
 
@@ -1550,6 +1553,30 @@ function triggerBanner(type, message) {
     setTimeout(() => { wrapper.innerHTML = ""; }, 300);
   }, 3500);
 }
+
+// =========================================================
+// REAL-TIME BROADCAST SYNC (Direct link with Control Panel Dashboard)
+// =========================================================
+let broadcastSyncChannel = null;
+try {
+  broadcastSyncChannel = new BroadcastChannel('ckt_score_sync');
+  broadcastSyncChannel.onmessage = (e) => {
+    if (!e.data) return;
+    if (e.data.type === 'STATE_UPDATE' && e.data.payload) {
+      render(e.data.payload);
+    } else if (e.data.type === 'SETTINGS_UPDATE' && e.data.payload) {
+      applySettings(e.data.payload);
+    }
+  };
+} catch (_) {}
+
+window.addEventListener('storage', (e) => {
+  if (e.key === 'chCurrentScore' && e.newValue) {
+    try { render(JSON.parse(e.newValue)); } catch (_) {}
+  } else if (e.key === 'chOverlaySettings' && e.newValue) {
+    try { applySettings(JSON.parse(e.newValue)); } catch (_) {}
+  }
+});
 
 // =========================================================
 // POLLING (In-App CricHeroes Bridge & /api/score)

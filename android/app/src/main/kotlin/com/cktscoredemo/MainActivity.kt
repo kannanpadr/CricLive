@@ -301,7 +301,7 @@ fun CktAppScreen(
                         Spacer(modifier = Modifier.width(6.dp))
                         Column {
                             Text(
-                                text = "CKTScore Live",
+                                text = "Cricket Live YT",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = Color.White
@@ -779,7 +779,7 @@ fun CktAppScreen(
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = "Enter your CKTScore server address (or tunnel):",
+                        text = "Enter your Cricket Live YT server address (or tunnel):",
                         fontSize = 12.sp,
                         color = Color(0xFFA6BAD4)
                     )
