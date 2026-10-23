@@ -24,6 +24,8 @@ class RtmpStreamService : Service(), ConnectChecker {
     data class StreamState(
         val isStreaming: Boolean = false,
         val isConnecting: Boolean = false,
+        val isReconnecting: Boolean = false,
+        val reconnectAttempts: Int = 0,
         val durationSeconds: Long = 0L,
         val bitrateKbps: Long = 0L,
         val errorMessage: String? = null,
@@ -44,6 +46,7 @@ class RtmpStreamService : Service(), ConnectChecker {
 
         private const val NOTIFICATION_ID = 8801
         private const val CHANNEL_ID = "ckt_live_stream_channel"
+        private const val MAX_RECONNECT_ATTEMPTS = 5
 
         private val _streamState = MutableStateFlow(StreamState())
         val streamState: StateFlow<StreamState> = _streamState.asStateFlow()
@@ -92,6 +95,11 @@ class RtmpStreamService : Service(), ConnectChecker {
     private var rtmpDisplay: RtmpDisplay? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private var durationSeconds = 0L
+    private var reconnectAttempts = 0
+    private var userRequestedStop = false
+    private var currentEndpoint: String = ""
+    private var currentBitrate: Int = 2500 * 1024
+
     private val timerRunnable = object : Runnable {
         override fun run() {
             if (_streamState.value.isStreaming) {
@@ -114,11 +122,14 @@ class RtmpStreamService : Service(), ConnectChecker {
         val action = intent?.action
 
         if (action == ACTION_STOP) {
+            userRequestedStop = true
             stopStreaming()
             return START_NOT_STICKY
         }
 
         if (action == ACTION_START) {
+            userRequestedStop = false
+            reconnectAttempts = 0
             val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
             val dataIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(EXTRA_DATA_INTENT, Intent::class.java)
@@ -132,6 +143,7 @@ class RtmpStreamService : Service(), ConnectChecker {
             val fps = intent.getIntExtra(EXTRA_FPS, 30)
             val bitrate = intent.getIntExtra(EXTRA_BITRATE, 2500 * 1024)
             val enableAudio = intent.getBooleanExtra(EXTRA_AUDIO, true)
+            currentBitrate = bitrate
 
             // Start foreground immediately
             val notification = buildNotification("Preparing YouTube Live Stream...")
@@ -183,6 +195,7 @@ class RtmpStreamService : Service(), ConnectChecker {
         if (targetEndpoint.isEmpty()) {
             targetEndpoint = "rtmp://a.rtmp.youtube.com/live2"
         }
+        currentEndpoint = targetEndpoint
 
         _streamState.value = StreamState(
             isConnecting = true,
@@ -255,9 +268,12 @@ class RtmpStreamService : Service(), ConnectChecker {
         }
         rtmpDisplay = null
         durationSeconds = 0L
+        reconnectAttempts = 0
         _streamState.value = _streamState.value.copy(
             isStreaming = false,
             isConnecting = false,
+            isReconnecting = false,
+            reconnectAttempts = 0,
             bitrateKbps = 0L
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -281,7 +297,6 @@ class RtmpStreamService : Service(), ConnectChecker {
         mainHandler.post {
             _streamState.value = _streamState.value.copy(
                 isConnecting = true,
-                isStreaming = false,
                 errorMessage = null
             )
             updateNotification()
@@ -290,10 +305,12 @@ class RtmpStreamService : Service(), ConnectChecker {
 
     override fun onConnectionSuccess() {
         mainHandler.post {
-            durationSeconds = 0L
+            reconnectAttempts = 0
             _streamState.value = _streamState.value.copy(
                 isConnecting = false,
                 isStreaming = true,
+                isReconnecting = false,
+                reconnectAttempts = 0,
                 errorMessage = null
             )
             mainHandler.post(timerRunnable)
@@ -301,20 +318,53 @@ class RtmpStreamService : Service(), ConnectChecker {
         }
     }
 
-    override fun onConnectionFailed(reason: String) {
-        mainHandler.post {
+    private fun handleConnectionLoss(reason: String) {
+        if (!userRequestedStop && reconnectAttempts < MAX_RECONNECT_ATTEMPTS && rtmpDisplay != null) {
+            reconnectAttempts++
+            val delayMs = (2000L * reconnectAttempts).coerceAtMost(8000L)
+            _streamState.value = _streamState.value.copy(
+                isConnecting = true,
+                isReconnecting = true,
+                reconnectAttempts = reconnectAttempts,
+                errorMessage = "Network drop. Reconnecting in ${delayMs / 1000}s (Attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)..."
+            )
+            updateNotification()
+            mainHandler.postDelayed({
+                if (!userRequestedStop && rtmpDisplay != null) {
+                    try {
+                        if (rtmpDisplay?.isStreaming == true) {
+                            rtmpDisplay?.stopStream()
+                        }
+                        rtmpDisplay?.startStream(currentEndpoint)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }, delayMs)
+        } else {
             mainHandler.removeCallbacks(timerRunnable)
             val friendlyReason = when {
                 reason.contains("Unimplemented message type", ignoreCase = true) || reason.contains("null", ignoreCase = true) ->
-                    "Server closed stream. YouTube Live requires secure RTMPS (rtmps://a.rtmps.youtube.com/live2) and an active Stream Key from YouTube Studio."
+                    "Server closed stream. YouTube Live requires an active broadcast in YouTube Studio."
                 else -> reason
             }
             _streamState.value = _streamState.value.copy(
                 isConnecting = false,
                 isStreaming = false,
-                errorMessage = "Connection Failed: $friendlyReason"
+                isReconnecting = false,
+                errorMessage = if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                    "Stream disconnected after $MAX_RECONNECT_ATTEMPTS reconnect attempts ($friendlyReason)"
+                } else {
+                    "Connection Failed: $friendlyReason"
+                }
             )
             stopStreaming()
+        }
+    }
+
+    override fun onConnectionFailed(reason: String) {
+        mainHandler.post {
+            handleConnectionLoss(reason)
         }
     }
 
@@ -328,13 +378,7 @@ class RtmpStreamService : Service(), ConnectChecker {
 
     override fun onDisconnect() {
         mainHandler.post {
-            mainHandler.removeCallbacks(timerRunnable)
-            _streamState.value = _streamState.value.copy(
-                isConnecting = false,
-                isStreaming = false,
-                bitrateKbps = 0L
-            )
-            stopStreaming()
+            handleConnectionLoss("Network disconnected")
         }
     }
 

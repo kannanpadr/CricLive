@@ -397,6 +397,33 @@ body.pos-top .overlay-container {
   font-size: 10px;
 }
 
+.sponsor-pill {
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fde047;
+  font-size: 9px;
+  animation: sponsorFade 0.6s ease;
+}
+
+.sponsor-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sponsor-badge {
+  color: #fde047;
+  font-weight: 700;
+  font-size: 9.5px;
+  letter-spacing: 0.3px;
+  animation: sponsorFade 0.6s ease;
+}
+
+@keyframes sponsorFade {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* 3. DOCKED PLAYER STATS BAR (Low Profile) */
 .player-bar {
   display: grid;
@@ -1027,6 +1054,7 @@ body.layout-compact .team-name {
         <span class="hdr-title" id="oTournament">CRICKET LIVE</span>
         <span class="hdr-sep">•</span>
         <span class="hdr-venue" id="oVenue">Live Streaming</span>
+        <span class="sponsor-slot" id="oSponsorSlot" style="display:none;"><span class="hdr-sep">•</span> <span class="sponsor-badge">🤝 <span id="oSponsorText"></span></span></span>
       </div>
       <div class="hdr-right">
         <span class="stale-badge" id="staleBadge">⚠️ DELAYED</span>
@@ -1060,6 +1088,7 @@ body.layout-compact .team-name {
           <span class="equation-pill proj-pill" id="statProjected"><small>PROJ</small> <b id="oProjected">182</b></span>
           <span class="equation-pill target-pill" id="statTarget" style="display:none"><small id="oTargetLbl">TARGET</small> <b id="oTarget">—</b></span>
           <span class="equation-pill chase-pill" id="chaseBox" style="display:none"><span id="oTicker"></span></span>
+          <span class="equation-pill sponsor-pill" id="oSponsorPill" style="display:none;"><small>PARTNER</small> <b id="oSponsorName"></b></span>
         </div>
       </div>
 
@@ -1218,8 +1247,33 @@ function render(data = current) {
   const totalOv = s.totalOvers || s.target_overs || 20;
   setText("oCrr", s.crr ?? "—");
   setText("oProjected", s.projected ?? "—");
-  setText("oTarget", s.target ?? "—");
-  setText("oTargetLbl", `TARGET (${totalOv} OV)`);
+
+  const isDls = Boolean(s.dlsApplied || s.isDls || s.dlsTarget);
+  if (isDls) {
+    const dlsTarget = s.dlsTarget || s.target;
+    setText("oTarget", dlsTarget ?? "—");
+    setText("oTargetLbl", "TARGET (DLS)");
+  } else {
+    setText("oTarget", s.target ?? "—");
+    setText("oTargetLbl", `TARGET (${totalOv} OV)`);
+  }
+
+  // Sponsor Carousel / Marquee
+  const rawSponsors = s.sponsors || s.sponsor || "";
+  const sponsorsList = Array.isArray(rawSponsors) ? rawSponsors : (rawSponsors ? String(rawSponsors).split(",").map(x => x.trim()).filter(Boolean) : []);
+  const spPill = $("oSponsorPill");
+  const spSlot = $("oSponsorSlot");
+  if (sponsorsList.length > 0) {
+    const activeIdx = Math.floor(Date.now() / 12000) % sponsorsList.length;
+    const sponsorName = sponsorsList[activeIdx];
+    setText("oSponsorName", sponsorName);
+    setText("oSponsorText", sponsorName);
+    if (spPill) spPill.style.display = "inline-flex";
+    if (spSlot) spSlot.style.display = "inline-flex";
+  } else {
+    if (spPill) spPill.style.display = "none";
+    if (spSlot) spSlot.style.display = "none";
+  }
 
   const isSecondInnings = (Number(s.currentInnings) === 2) || (s.currentInnings == null && Boolean(s.target && Number(s.target) > 0));
   const statProjected = $("statProjected");
@@ -1228,7 +1282,7 @@ function render(data = current) {
 
   const oInnPill = $("oInningsPill");
   if (oInnPill) {
-    oInnPill.textContent = isSecondInnings ? "2ND INN · CHASE" : "1ST INNINGS";
+    oInnPill.textContent = isSecondInnings ? (isDls ? "2ND INN · DLS CHASE" : "2ND INN · CHASE") : "1ST INNINGS";
     oInnPill.className = "innings-pill" + (isSecondInnings ? " chase-active" : "");
   }
 
@@ -1240,10 +1294,13 @@ function render(data = current) {
     let chaseStr = "";
     if (s.chase) {
       chaseStr = s.chase.replace(/need\s+/i, "Need ").replace(/runs\s+in/i, "off");
-    } else if (s.target) {
+    } else if (s.target || s.dlsTarget) {
       chaseStr = `Need ${s.requiredRuns || '—'} off ${s.ballsRemaining || '—'}b`;
     } else {
       chaseStr = "Live Chase";
+    }
+    if (isDls && !chaseStr.includes("(DLS)")) {
+      chaseStr += " (DLS)";
     }
     setText("oTicker", chaseStr);
   } else {

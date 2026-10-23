@@ -47,6 +47,7 @@ import android.media.projection.MediaProjectionManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -967,6 +968,20 @@ fun CameraStreamOverlayScreen(
     var isMicAudioEnabled by remember { mutableStateOf(streamPrefs.getBoolean("yt_audio_enabled", true)) }
     var isKeyVisible by remember { mutableStateOf(false) }
     var streamKeyValidationError by remember { mutableStateOf<String?>(null) }
+    var isScreenLocked by remember { mutableStateOf(false) }
+    var isBreakScreenActive by remember { mutableStateOf(false) }
+    var batteryLevel by remember { mutableIntStateOf(100) }
+
+    DisposableEffect(Unit) {
+        val batteryFilter = android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
+        val batteryStatus = context.registerReceiver(null, batteryFilter)
+        val level = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+        if (level >= 0 && scale > 0) {
+            batteryLevel = (level * 100 / scale)
+        }
+        onDispose {}
+    }
 
     // Automatically capture stream key when returning from YouTube Studio in Chrome Custom Tabs
     DisposableEffect(lifecycleOwner) {
@@ -1064,9 +1079,9 @@ fun CameraStreamOverlayScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(camera, minZoomRatio, maxZoomRatio) {
+                .pointerInput(camera, minZoomRatio, maxZoomRatio, isScreenLocked) {
                     detectTransformGestures { _, _, zoomChange, _ ->
-                        if (zoomChange != 1.0f && camera != null) {
+                        if (!isScreenLocked && zoomChange != 1.0f && camera != null) {
                             val target = (currentZoomRatio * zoomChange).coerceIn(minZoomRatio, maxZoomRatio)
                             currentZoomRatio = target
                             camera?.cameraControl?.setZoomRatio(target)
@@ -1139,6 +1154,85 @@ fun CameraStreamOverlayScreen(
             }
         )
 
+        // LAYER: BROADCAST BREAK SCREEN / INTERMISSION GRAPHIC
+        if (isBreakScreenActive) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xF0071326)),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xEE0B1C33)),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0x4400C7FF)),
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("🏏", fontSize = 36.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "INNINGS BREAK / TECHNICAL PAUSE",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFFFC107)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Live broadcast will resume shortly",
+                            fontSize = 12.sp,
+                            color = Color(0xFFA6BAD4)
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Button(
+                            onClick = { isBreakScreenActive = false },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087CFF)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("▶ Resume Camera Feed", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+
+        // LAYER: TRIPOD TOUCH GUARD / SCREEN LOCK INTERCEPTOR
+        if (isScreenLocked) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0x33000000))
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, _, _, _ -> }
+                    },
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 16.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xDD071529))
+                        .border(BorderStroke(1.dp, Color(0x88FFC107)), RoundedCornerShape(20.dp))
+                        .clickable { isScreenLocked = false }
+                        .padding(horizontal = 14.dp, vertical = 7.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("🔒", fontSize = 13.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Touch Guard Active · Tap to Unlock",
+                            fontSize = 11.sp,
+                            color = Color(0xFFFFC107),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
         // Error message banner if streaming fails
         if (streamState.errorMessage != null) {
             Box(
@@ -1187,7 +1281,7 @@ fun CameraStreamOverlayScreen(
         }
 
         // LAYER 3: FLOATING CAMERA & STREAM CONTROLS (Top Bar)
-        if (showControls) {
+        if (showControls && !isScreenLocked) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1203,13 +1297,13 @@ fun CameraStreamOverlayScreen(
                 ) {
                     // 🔴 YOUTUBE LIVE STREAMING BUTTON / STATUS PILL
                     if (streamState.isStreaming) {
-                        // LIVE STATUS PILL (Click to stop)
+                        // LIVE STATUS PILL WITH HEALTH DIAGNOSTICS (Bitrate + Battery)
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color(0xFFE50914))
                                 .clickable { showStopConfirmDialog = true }
-                                .padding(horizontal = 9.dp, vertical = 5.dp)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
@@ -1219,13 +1313,33 @@ fun CameraStreamOverlayScreen(
                                         .background(Color.White)
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
+                                val bitrateStr = if (streamState.bitrateKbps >= 1000) {
+                                    String.format(Locale.US, "%.1fM", streamState.bitrateKbps / 1000f)
+                                } else if (streamState.bitrateKbps > 0) {
+                                    "${streamState.bitrateKbps}k"
+                                } else ""
                                 Text(
-                                    text = "LIVE ${formatDuration(streamState.durationSeconds)}",
+                                    text = "LIVE ${formatDuration(streamState.durationSeconds)}${if (bitrateStr.isNotEmpty()) " · $bitrateStr" else ""} · 🔋$batteryLevel%",
                                     fontSize = 9.sp,
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
+                        }
+                    } else if (streamState.isReconnecting) {
+                        // AUTO-RECONNECTING STATE
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFB45309))
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "⏳ Reconnecting (${streamState.reconnectAttempts}/5)...",
+                                fontSize = 9.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     } else if (streamState.isConnecting) {
                         // CONNECTING STATE
@@ -1265,6 +1379,33 @@ fun CameraStreamOverlayScreen(
                                 )
                             }
                         }
+                    }
+
+                    // Break / Privacy Screen Toggle
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isBreakScreenActive) Color(0xFFD97706) else Color(0xCC071529))
+                            .clickable { isBreakScreenActive = !isBreakScreenActive }
+                            .padding(horizontal = 7.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = if (isBreakScreenActive) "▶ Live" else "⏸ Break",
+                            fontSize = 10.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Tripod Touch Guard / Screen Lock Toggle
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color(0xCC071529))
+                            .clickable { isScreenLocked = true }
+                            .padding(8.dp)
+                    ) {
+                        Text("🔒", fontSize = 12.sp)
                     }
 
                     // Quick Zoom Cycle Pill (1x -> 2x -> 3x -> 1x)
@@ -1320,7 +1461,7 @@ fun CameraStreamOverlayScreen(
                     }
                 }
             }
-        } else {
+        } else if (!isScreenLocked) {
             // Restore Controls floating pill + Small Live Indicator if streaming
             Row(
                 modifier = Modifier
@@ -1358,7 +1499,7 @@ fun CameraStreamOverlayScreen(
         }
 
         // LAYER 4: FLOATING VERTICAL CAMERA ZOOM CONTROLLER (Right Side for quick thumb control)
-        if (showControls) {
+        if (showControls && !isScreenLocked) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)

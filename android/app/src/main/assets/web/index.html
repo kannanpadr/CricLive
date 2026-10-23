@@ -1071,6 +1071,16 @@
                   <input id="matchTotalOvers" type="text"
                     placeholder="Auto-detected from scorecard (or enter 15, 20, 50)">
                 </div>
+                <div class="form-row">
+                  <label for="matchDlsTarget">🌧️ Rain Interruption / DLS Target (Optional)</label>
+                  <input id="matchDlsTarget" type="text"
+                    placeholder="e.g. 142 (Overrides chase target to DLS)">
+                </div>
+                <div class="form-row">
+                  <label for="matchSponsors">🤝 Sponsors / Commercial Partners (Rotating Marquee)</label>
+                  <input id="matchSponsors" type="text"
+                    placeholder="e.g. Title Sponsor: ABC Motors, Powered By: XYZ Sports">
+                </div>
                 <div class="btnrow">
                   <button class="primary" id="btnSaveApply" onclick="saveSettingsAndSync()">✓ Save & Auto-Sync</button>
                   <button onclick="testConnection()">◎ Test Reader</button>
@@ -1354,6 +1364,8 @@
         showLogos: $("showLogos").checked,
         showTarget: $("showTarget").checked,
         innings: $("matchInnings") ? $("matchInnings").value : "2",
+        dlsTarget: $("matchDlsTarget") ? $("matchDlsTarget").value.trim() : "",
+        sponsors: $("matchSponsors") ? $("matchSponsors").value.trim() : "",
         displayOptions: {
           tournament: $('[data-display="tournament"]')?.checked !== false,
           venue: $('[data-display="venue"]')?.checked !== false,
@@ -1365,8 +1377,19 @@
           thisover: $('[data-display="thisover"]')?.checked !== false
         }
       };
+      if (settings.dlsTarget) {
+        current.dlsTarget = settings.dlsTarget;
+        current.dlsApplied = true;
+      } else {
+        current.dlsApplied = false;
+        delete current.dlsTarget;
+      }
+      if (settings.sponsors) {
+        current.sponsors = settings.sponsors;
+      }
       try {
         localStorage.setItem("chOverlaySettings", JSON.stringify(settings));
+        localStorage.setItem("chCurrentScore", JSON.stringify(current));
         if (broadcastSyncChannel) {
           broadcastSyncChannel.postMessage({ type: 'SETTINGS_UPDATE', payload: settings });
           broadcastSyncChannel.postMessage({ type: 'STATE_UPDATE', payload: current });
