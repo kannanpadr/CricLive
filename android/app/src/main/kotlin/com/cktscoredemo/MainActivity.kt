@@ -33,7 +33,13 @@ import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import java.util.concurrent.TimeUnit
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.lifecycle.Lifecycle
@@ -976,6 +982,26 @@ fun CameraStreamOverlayScreen(
     var minZoomRatio by remember { mutableFloatStateOf(1f) }
     var maxZoomRatio by remember { mutableFloatStateOf(8f) }
 
+    // Camera Focus & Focus Lock States (Cricket Broadcast Focus Engine)
+    var isFocusLocked by remember { mutableStateOf(false) }
+    var focusRingOffset by remember { mutableStateOf<Offset?>(null) }
+    var focusRingColor by remember { mutableStateOf(Color(0xFF38BDF8)) }
+    var focusStatusToast by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(focusRingOffset) {
+        if (focusRingOffset != null) {
+            kotlinx.coroutines.delay(1800)
+            focusRingOffset = null
+        }
+    }
+
+    LaunchedEffect(focusStatusToast) {
+        if (focusStatusToast != null) {
+            kotlinx.coroutines.delay(2200)
+            focusStatusToast = null
+        }
+    }
+
     // Stream Setup & Dialog States
     var showStreamSetupDialog by remember { mutableStateOf(false) }
     var showStopConfirmDialog by remember { mutableStateOf(false) }
@@ -1129,38 +1155,24 @@ fun CameraStreamOverlayScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // LAYER 1: LIVE HARDWARE CAMERA PREVIEW WITH PINCH-TO-ZOOM
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(camera, minZoomRatio, maxZoomRatio, isScreenLocked) {
-                    detectTransformGestures { _, _, zoomChange, _ ->
-                        if (!isScreenLocked && zoomChange != 1.0f && camera != null) {
-                            val target = (currentZoomRatio * zoomChange).coerceIn(minZoomRatio, maxZoomRatio)
-                            currentZoomRatio = target
-                            camera?.cameraControl?.setZoomRatio(target)
-                        }
-                    }
+        // LAYER 1: LIVE HARDWARE CAMERA PREVIEW
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { ctx ->
+                PreviewView(ctx).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    scaleType = PreviewView.ScaleType.FILL_CENTER
+                    implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                    previewView = this
                 }
-        ) {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    PreviewView(ctx).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        scaleType = PreviewView.ScaleType.FILL_CENTER
-                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-                        previewView = this
-                    }
-                },
-                update = { pv ->
-                    previewView = pv
-                }
-            )
-        }
+            },
+            update = { pv ->
+                previewView = pv
+            }
+        )
 
         // LAYER 2: TRANSPARENT CRICKET SCOREBOARD OVERLAY (Foreground)
         AndroidView(
@@ -1168,6 +1180,7 @@ fun CameraStreamOverlayScreen(
             factory = { ctx ->
                 WebView(ctx).apply {
                     setBackgroundColor(0x00000000) // Transparent background
+                    setOnTouchListener { _, _ -> false } // Pass gestures through to camera
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
@@ -1207,6 +1220,71 @@ fun CameraStreamOverlayScreen(
                 }
             }
         )
+
+        // LAYER 2.5: GESTURE INTERCEPTOR (PINCH-TO-ZOOM & TAP-TO-FOCUS / LOCK)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(camera, minZoomRatio, maxZoomRatio, isScreenLocked) {
+                    detectTransformGestures { _, _, zoomChange, _ ->
+                        if (!isScreenLocked && zoomChange != 1.0f && camera != null) {
+                            val target = (currentZoomRatio * zoomChange).coerceIn(minZoomRatio, maxZoomRatio)
+                            currentZoomRatio = target
+                            camera?.cameraControl?.setZoomRatio(target)
+                        }
+                    }
+                }
+                .pointerInput(camera, isFocusLocked, isScreenLocked, previewView) {
+                    detectTapGestures(
+                        onTap = { offset ->
+                            if (!isScreenLocked && camera != null && previewView != null) {
+                                val factory = previewView?.meteringPointFactory ?: return@detectTapGestures
+                                val point = factory.createPoint(offset.x, offset.y)
+                                focusRingOffset = offset
+                                triggerHapticFeedback(context)
+
+                                if (isFocusLocked) {
+                                    val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                                        .disableAutoCancel()
+                                        .build()
+                                    camera?.cameraControl?.startFocusAndMetering(action)
+                                    focusRingColor = Color(0xFFFFC107)
+                                    focusStatusToast = "🔒 Focus Locked at point"
+                                } else {
+                                    val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                                        .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                                        .build()
+                                    camera?.cameraControl?.startFocusAndMetering(action)
+                                    focusRingColor = Color(0xFF38BDF8)
+                                    focusStatusToast = "🎯 Focused"
+                                }
+                            }
+                        }
+                    )
+                }
+        ) {
+            // ANIMATED BROADCAST FOCUS TARGET RING
+            if (focusRingOffset != null) {
+                val offset = focusRingOffset!!
+                val density = LocalDensity.current
+                val xDp = with(density) { (offset.x - 32.dp.toPx()).toDp() }
+                val yDp = with(density) { (offset.y - 32.dp.toPx()).toDp() }
+                Box(
+                    modifier = Modifier
+                        .offset(x = xDp, y = yDp)
+                        .size(64.dp)
+                        .border(BorderStroke(2.dp, focusRingColor), RoundedCornerShape(10.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(focusRingColor)
+                            .align(Alignment.Center)
+                    )
+                }
+            }
+        }
 
         // LAYER: BROADCAST BREAK SCREEN / INTERMISSION GRAPHIC
         if (isBreakScreenActive) {
@@ -1517,6 +1595,54 @@ fun CameraStreamOverlayScreen(
                         )
                     }
 
+                    // Camera Auto Focus / Focus Lock Pill (Cricket Broadcast Focus)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isFocusLocked) Color(0xFFB45309) else Color(0xCC071529))
+                            .border(
+                                BorderStroke(1.dp, if (isFocusLocked) Color(0xFFFFC107) else Color(0x3338BDF8)),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .clickable {
+                                triggerHapticFeedback(context)
+                                if (isFocusLocked) {
+                                    camera?.cameraControl?.cancelFocusAndMetering()
+                                    isFocusLocked = false
+                                    focusRingOffset = null
+                                    focusStatusToast = "🎯 Continuous Auto Focus active"
+                                } else {
+                                    val pv = previewView
+                                    if (pv != null && camera != null) {
+                                        val factory = pv.meteringPointFactory
+                                        val centerX = pv.width / 2f
+                                        val centerY = pv.height / 2f
+                                        val point = factory.createPoint(centerX, centerY)
+                                        val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                                            .disableAutoCancel()
+                                            .build()
+                                        camera?.cameraControl?.startFocusAndMetering(action)
+                                        focusRingOffset = Offset(centerX, centerY)
+                                        focusRingColor = Color(0xFFFFC107)
+                                    }
+                                    isFocusLocked = true
+                                    focusStatusToast = "🔒 Focus Locked (No Hunting)"
+                                }
+                            }
+                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (isFocusLocked) "🔒" else "🎯", fontSize = 11.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isFocusLocked) "Locked" else "AF Auto",
+                                fontSize = 11.sp,
+                                color = if (isFocusLocked) Color(0xFFFFC107) else Color(0xFF6EE7B7),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                     // Torch / Flashlight
                     Box(
                         modifier = Modifier
@@ -1675,8 +1801,71 @@ fun CameraStreamOverlayScreen(
                         ) {
                             Text("−", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
+
+                        // Focus Mode Button in Thumb Controller (🎯 AF / 🔒 Lock)
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(if (isFocusLocked) Color(0xFFFFC107) else Color(0x22FFFFFF))
+                                .clickable {
+                                    triggerHapticFeedback(context)
+                                    if (isFocusLocked) {
+                                        camera?.cameraControl?.cancelFocusAndMetering()
+                                        isFocusLocked = false
+                                        focusRingOffset = null
+                                        focusStatusToast = "🎯 Auto Focus active"
+                                    } else {
+                                        val pv = previewView
+                                        if (pv != null && camera != null) {
+                                            val factory = pv.meteringPointFactory
+                                            val centerX = pv.width / 2f
+                                            val centerY = pv.height / 2f
+                                            val point = factory.createPoint(centerX, centerY)
+                                            val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                                                .disableAutoCancel()
+                                                .build()
+                                            camera?.cameraControl?.startFocusAndMetering(action)
+                                            focusRingOffset = Offset(centerX, centerY)
+                                            focusRingColor = Color(0xFFFFC107)
+                                        }
+                                        isFocusLocked = true
+                                        focusStatusToast = "🔒 Focus Locked (No Hunting)"
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isFocusLocked) "🔒" else "🎯",
+                                fontSize = 11.sp,
+                                color = if (isFocusLocked) Color(0xFF071529) else Color.White
+                            )
+                        }
                     }
                 }
+            }
+        }
+
+        // FLOATING FOCUS STATUS INDICATOR BANNER
+        if (focusStatusToast != null && !isScreenLocked) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 58.dp)
+                    .align(Alignment.TopCenter)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xEE071529))
+                    .border(
+                        BorderStroke(1.dp, if (isFocusLocked) Color(0xAAFFC107) else Color(0xAA38BDF8)),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = focusStatusToast!!,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isFocusLocked) Color(0xFFFFC107) else Color(0xFF6EE7B7)
+                )
             }
         }
     }
