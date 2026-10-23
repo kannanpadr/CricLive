@@ -1195,7 +1195,9 @@ fun CameraStreamOverlayScreen(
                 })
 
                 val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
-                    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                    override fun onDown(e: MotionEvent): Boolean = true
+
+                    override fun onSingleTapUp(e: MotionEvent): Boolean {
                         if (!isScreenLocked && camera != null && previewView != null) {
                             val pv = previewView ?: return false
                             val factory = pv.meteringPointFactory
@@ -1268,8 +1270,8 @@ fun CameraStreamOverlayScreen(
                     // Outside that area: handle tap-to-focus and pinch-zoom on the camera preview!
                     setOnTouchListener { _, event ->
                         val density = ctx.resources.displayMetrics.density
-                        val controlsWidthPx = 460f * density
-                        val controlsHeightPx = 80f * density
+                        val controlsWidthPx = 480f * density
+                        val controlsHeightPx = 90f * density
 
                         val isNearOverlayControls = event.x <= controlsWidthPx && event.y <= controlsHeightPx
                         if (isNearOverlayControls) {
@@ -1443,10 +1445,8 @@ fun CameraStreamOverlayScreen(
         if (showControls && !isScreenLocked) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 10.dp)
-                    .align(Alignment.TopCenter),
-                horizontalArrangement = Arrangement.End,
+                    .align(Alignment.TopEnd)
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Streaming & Camera Action Pills
