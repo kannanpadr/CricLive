@@ -108,8 +108,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import android.view.KeyEvent
+
+fun triggerHapticFeedback(context: Context) {
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            vibrator?.vibrate(android.os.VibrationEffect.createOneShot(30, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        }
+    } catch (_: Exception) {}
+}
 
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        var onHardwareVolumeUp: (() -> Unit)? = null
+        var onHardwareVolumeDown: (() -> Unit)? = null
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP && onHardwareVolumeUp != null) {
+            onHardwareVolumeUp?.invoke()
+            return true
+        }
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && onHardwareVolumeDown != null) {
+            onHardwareVolumeDown?.invoke()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -971,6 +998,7 @@ fun CameraStreamOverlayScreen(
     var isScreenLocked by remember { mutableStateOf(false) }
     var isBreakScreenActive by remember { mutableStateOf(false) }
     var batteryLevel by remember { mutableIntStateOf(100) }
+    var deviceTempC by remember { mutableFloatStateOf(0f) }
 
     DisposableEffect(Unit) {
         val batteryFilter = android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
@@ -980,7 +1008,33 @@ fun CameraStreamOverlayScreen(
         if (level >= 0 && scale > 0) {
             batteryLevel = (level * 100 / scale)
         }
+        val tempRaw = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1
+        if (tempRaw > 0) {
+            deviceTempC = tempRaw / 10f
+        }
         onDispose {}
+    }
+
+    // Hardware volume buttons integration (Bluetooth Remote & Tripod Ergonomics)
+    DisposableEffect(camera, minZoomRatio, maxZoomRatio, isBreakScreenActive) {
+        MainActivity.onHardwareVolumeUp = {
+            val next = when {
+                currentZoomRatio < 1.8f -> 2.0f
+                currentZoomRatio < 2.8f -> 3.0f
+                else -> 1.0f
+            }.coerceIn(minZoomRatio, maxZoomRatio)
+            currentZoomRatio = next
+            camera?.cameraControl?.setZoomRatio(next)
+            triggerHapticFeedback(context)
+        }
+        MainActivity.onHardwareVolumeDown = {
+            isBreakScreenActive = !isBreakScreenActive
+            triggerHapticFeedback(context)
+        }
+        onDispose {
+            MainActivity.onHardwareVolumeUp = null
+            MainActivity.onHardwareVolumeDown = null
+        }
     }
 
     // Automatically capture stream key when returning from YouTube Studio in Chrome Custom Tabs
@@ -1216,7 +1270,10 @@ fun CameraStreamOverlayScreen(
                         .clip(RoundedCornerShape(20.dp))
                         .background(Color(0xDD071529))
                         .border(BorderStroke(1.dp, Color(0x88FFC107)), RoundedCornerShape(20.dp))
-                        .clickable { isScreenLocked = false }
+                        .clickable {
+                            triggerHapticFeedback(context)
+                            isScreenLocked = false
+                        }
                         .padding(horizontal = 14.dp, vertical = 7.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1295,14 +1352,34 @@ fun CameraStreamOverlayScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Thermal Warning Indicator if device is overheating under sun
+                    if (deviceTempC >= 42.0f) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFDC2626))
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "🔥 Overheating ${String.format(Locale.US, "%.1f°C", deviceTempC)}",
+                                fontSize = 9.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                     // 🔴 YOUTUBE LIVE STREAMING BUTTON / STATUS PILL
                     if (streamState.isStreaming) {
-                        // LIVE STATUS PILL WITH HEALTH DIAGNOSTICS (Bitrate + Battery)
+                        // LIVE STATUS PILL WITH HEALTH DIAGNOSTICS (Bitrate + Temp + Battery)
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color(0xFFE50914))
-                                .clickable { showStopConfirmDialog = true }
+                                .clickable {
+                                    triggerHapticFeedback(context)
+                                    showStopConfirmDialog = true
+                                }
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1318,8 +1395,9 @@ fun CameraStreamOverlayScreen(
                                 } else if (streamState.bitrateKbps > 0) {
                                     "${streamState.bitrateKbps}k"
                                 } else ""
+                                val tempStr = if (deviceTempC > 0f) " · ${String.format(Locale.US, "%.0f°C", deviceTempC)}" else ""
                                 Text(
-                                    text = "LIVE ${formatDuration(streamState.durationSeconds)}${if (bitrateStr.isNotEmpty()) " · $bitrateStr" else ""} · 🔋$batteryLevel%",
+                                    text = "LIVE ${formatDuration(streamState.durationSeconds)}${if (bitrateStr.isNotEmpty()) " · $bitrateStr" else ""}$tempStr · 🔋$batteryLevel%",
                                     fontSize = 9.sp,
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold
@@ -1363,6 +1441,7 @@ fun CameraStreamOverlayScreen(
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color(0xFFE50914))
                                 .clickable {
+                                    triggerHapticFeedback(context)
                                     streamKeyValidationError = null
                                     showStreamSetupDialog = true
                                 }
@@ -1386,7 +1465,10 @@ fun CameraStreamOverlayScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isBreakScreenActive) Color(0xFFD97706) else Color(0xCC071529))
-                            .clickable { isBreakScreenActive = !isBreakScreenActive }
+                            .clickable {
+                                triggerHapticFeedback(context)
+                                isBreakScreenActive = !isBreakScreenActive
+                            }
                             .padding(horizontal = 7.dp, vertical = 5.dp)
                     ) {
                         Text(
@@ -1402,7 +1484,10 @@ fun CameraStreamOverlayScreen(
                         modifier = Modifier
                             .clip(CircleShape)
                             .background(Color(0xCC071529))
-                            .clickable { isScreenLocked = true }
+                            .clickable {
+                                triggerHapticFeedback(context)
+                                isScreenLocked = true
+                            }
                             .padding(8.dp)
                     ) {
                         Text("🔒", fontSize = 12.sp)
@@ -1557,6 +1642,7 @@ fun CameraStreamOverlayScreen(
                                         .clip(CircleShape)
                                         .background(if (isSelected) Color(0xFFFFC107) else Color(0x22FFFFFF))
                                         .clickable {
+                                            triggerHapticFeedback(context)
                                             val target = preset.coerceIn(minZoomRatio, maxZoomRatio)
                                             currentZoomRatio = target
                                             camera?.cameraControl?.setZoomRatio(target)
@@ -1580,6 +1666,7 @@ fun CameraStreamOverlayScreen(
                                 .clip(CircleShape)
                                 .background(Color(0x33FFFFFF))
                                 .clickable {
+                                    triggerHapticFeedback(context)
                                     val prev = (currentZoomRatio - 0.5f).coerceIn(minZoomRatio, maxZoomRatio)
                                     currentZoomRatio = prev
                                     camera?.cameraControl?.setZoomRatio(prev)
@@ -1625,6 +1712,28 @@ fun CameraStreamOverlayScreen(
                         fontSize = 12.sp,
                         color = Color(0xFFA6BAD4)
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Do Not Disturb reminder banner for clean broadcast
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF0F1E36))
+                            .border(BorderStroke(1.dp, Color(0x3338BDF8)), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 7.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🔕", fontSize = 13.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Pro Tip: Enable 'Do Not Disturb' to prevent WhatsApp calls/notifications from appearing on YouTube Live.",
+                                fontSize = 10.5.sp,
+                                color = Color(0xFFBAE6FD)
+                            )
+                        }
+                    }
 
                     if (autoDetectedKeyNotice != null) {
                         Spacer(modifier = Modifier.height(8.dp))

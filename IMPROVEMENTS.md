@@ -1,107 +1,178 @@
-# CricLive — Application Improvement Areas & Roadmap
+# CricLive — Improvement Areas & Technical Roadmap
 
-Based on the functional architecture outlined in [FUNCTIONALITY.md](file:///d:/CricketLive/CricLive/FUNCTIONALITY.md), this document details technical and production improvement areas categorized by priority, impact, and feasibility.
-
----
-
-## 1. Live Streaming Resilience & Quality (High Priority)
-
-### 1.1 Adaptive Bitrate & Network Drop Handling
-- **Current State**: The RTMP stream operates on fixed target bitrates (5 Mbps for 1080p, 9 Mbps for 1440p, 18 Mbps for 4K).
-- **Issue**: On outdoor grounds with fluctuating 4G/5G mobile signals, bandwidth dips cause packet loss, frame dropping, or stream termination on YouTube.
-- **Improvement**: 
-  - Implement dynamic bitrate adaptation in [`RtmpStreamService.kt`](file:///d:/CricketLive/CricLive/android/app/src/main/kotlin/com/cktscoredemo/RtmpStreamService.kt).
-  - Automatically drop to 2.5–3.5 Mbps during congested cell tower intervals and step back up when bandwidth recovers.
-  - Add auto-reconnect backoff (3 retries with exponential delay) if connection drops.
-
-### 1.2 "Do Not Disturb" & Privacy Shield During Live Broadcast
-- **Current State**: The app uses Android's `MediaProjection` (screen capture) to combine the camera preview and transparent scoreboard.
-- **Issue**: Incoming phone calls, WhatsApp messages, volume sliders, or low-battery pop-ups will be recorded and broadcast live onto YouTube.
-- **Improvement**:
-  - Request `NotificationManager.INTERRUPTION_FILTER_PRIORITY` (Do Not Disturb) when starting a live broadcast to silence notifications.
-  - Add a **"Privacy Mute / Break Screen"** button that temporarily replaces the stream output with a static "Innings Break / Technical Pause" graphic while the operator checks their phone.
-
-### 1.3 Audio Mixing: Commentary & Broadcast Sound Effects
-- **Current State**: Commentary microphone audio is piped into AAC directly from the hardware mic. Overlay event sounds (boundary chime, wicket siren) play through the web audio engine and may sound muffled or cause echo.
-- **Improvement**:
-  - Direct digital audio mixing: Route in-app sound effects (boundary music, wicket horns) directly into the RTMP AAC audio encoder track alongside microphone input with independent volume sliders.
-  - Implement a noise gate and compressor to prevent audio distortion/peaking when commentators shout during exciting wickets.
+This document provides a comprehensive, multi-tiered analysis of potential enhancements for **CricLive**. Recommendations are categorized into **Critical**, **Major**, **Minor**, and **Trivial** tiers to guide development, production stability, and broadcast polish.
 
 ---
 
-## 2. CricHeroes Sync & Match Data Integrity (High Priority)
+## 1. 🔴 Critical Improvements (Stability, Fail-safes & Production Uptime)
 
-### 2.1 Rain Interruption & DLS (Duckworth-Lewis-Stern) Handling
-- **Current State**: The chase equation relies on standard `totalOvers` and `target` values.
-- **Issue**: In interrupted club or tournament matches, overs are reduced and revised targets are set by DLS.
-- **Improvement**:
-  - Add DLS detection in [`cricheroes-service.js`](file:///d:/CricketLive/CricLive/cricheroes-service.js) and manual DLS target override in [`public/index.html`](file:///d:/CricketLive/CricLive/public/index.html).
-  - Display "Target (DLS)" clearly in the overlay equations.
+Critical improvements address fatal crashes, live stream drops during outdoor broadcasts, memory leaks, and Android OS-level background interruptions.
 
-### 2.2 CricHeroes WebSocket / Canvas Fallback Resilience
-- **Current State**: The mobile syncer extracts scores from canvas `fillText` and DOM elements every 4–6 seconds.
-- **Issue**: If CricHeroes updates their frontend classes, DOM scrapers can temporarily fail.
-- **Improvement**:
-  - Add JSON schema validation on the extracted payload. If extraction fails 3 consecutive times, alert the operator with a warning badge and fall back to manual score control without dropping the stream.
+### 1.1 Dynamic Adaptive Bitrate (ABR) on Network Drop
+- **Current State**: Stream bitrate is fixed at 5 Mbps (1080p), 9 Mbps (1440p), or 18 Mbps (4K). While auto-reconnect handles complete drops, sudden bandwidth drops under congested 4G/5G towers cause packet buffering on YouTube.
+- **Root Cause**: Outdoor grounds often experience fluctuating cell tower throughput.
+- **Proposed Solution**:
+  - Implement dynamic bandwidth adaptation using RootEncoder's on-the-fly bitrate stepping (`setVideoBitrateOnFly(bitrate)`).
+  - Continuously monitor socket queue delay in `ConnectChecker`. If delay exceeds 800ms, step down bitrate by 30% (e.g. from 5,000 Kbps to 3,500 Kbps).
+  - Step back up gradually after 15 seconds of stable transmission.
 
----
+### 1.2 Android 14+ Foreground Service & MediaProjection Expiry Guard
+- **Current State**: `RtmpStreamService` uses `ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION`.
+- **Root Cause**: On Android 14 (API 34), `MediaProjection` permissions granted via `createScreenCaptureIntent()` are single-use and can expire if the service is restarted without a fresh prompt or if the OS enforces strict background execution limits.
+- **Proposed Solution**:
+  - Cache the `Intent` and `resultCode` safely during the active match session.
+  - Implement a `ServiceConnection` binder lifecycle to prevent Android OS process kills when the phone enters low memory conditions under heavy camera heat.
+  - Add `FLAG_INCLUDE_STOPPED_PACKAGES` and foreground notification channel with high importance fallback if stream is disrupted.
 
-## 3. Broadcast Graphics & Production Polish (Medium Priority)
+### 1.3 Thermal Throttle & Sun Exposure Protection
+- **Current State**: Streaming 1080p/60 or 4K with CameraX and hardware MediaProjection outdoors under direct sunlight generates high heat, leading to thermal throttling (camera frame rate dropping to 15 FPS or phone auto-shutdown).
+- **Proposed Solution**:
+  - Register an `Intent.ACTION_POWER_CONNECTED` and `Intent.ACTION_BATTERY_CHANGED` listener with battery temperature check (`EXTRA_TEMPERATURE`).
+  - If phone battery temperature exceeds 44°C:
+    1. Display an on-screen thermal warning badge (`🔥 Device Overheating: 44.5°C`).
+    2. Automatically lower screen brightness to minimum (stream capture continues at full brightness).
+    3. Option to auto-step stream resolution down to 1080p 30fps to cool the SoC.
 
-### 3.1 Sponsor & Tournament Branding Banner Carousel
-- **Current State**: The overlay displays tournament name, venue, and team colors.
-- **Issue**: Local tournament organizers rely heavily on sponsors (title sponsors, powered-by logos, local business ads).
-- **Improvement**:
-  - Add a rotating sponsor banner slot in [`public/overlay.html`](file:///d:/CricketLive/CricLive/public/overlay.html) (cycles sponsors every 30 seconds at the end of an over).
-  - Add an operator toggle to show a full-card sponsor splash during drinks breaks.
-
-### 3.2 Automated Milestones & Stinger Transitions
-- **Current State**: Boundary banners appear at the top/center for 3.5 seconds.
-- **Improvement**:
-  - Add broadcast-style transition wipes (stingers) across the screen when a team reaches a 50/100 team total or a batter completes a half-century.
-  - Display player portrait silhouettes or profile photos next to the striker name when available.
-
-### 3.3 Wagon Wheel & Manhattan Chart Integration
-- **Current State**: Only numerical stats (runs, balls, 4s, 6s, SR, economy) are shown.
-- **Improvement**:
-  - Between overs or during wicket reviews, allow the operator to display a mini "Over Summary" bar chart showing runs scored per over.
-
----
-
-## 4. Mobile Operator Ergonomics & UX (High Value)
-
-### 4.1 Tripod Touch Guard / Screen Lock Mode
-- **Current State**: The camera screen has pinch-to-zoom and floating buttons.
-- **Issue**: When adjusting the phone on a tripod or when rain/sweat droplets touch the screen, accidental taps can disconnect the stream or change zoom unexpectedly.
-- **Improvement**:
-  - Add a **Touch Lock toggle** (long-press 2 seconds to unlock) that disables all screen gesture inputs while keeping the camera and overlay streaming uninterrupted.
-
-### 4.2 Stream Health & Diagnostics Dashboard
-- **Current State**: Top status shows `LIVE [Duration]`.
-- **Improvement**:
-  - Add a discreet diagnostic toggle showing:
-    - Current upload bitrate (e.g. `4,850 kbps`)
-    - Dropped frame count & percentage (`0.2%`)
-    - Battery percentage & phone temperature alert (prevent overheating under the sun).
-
-### 4.3 Hardware Button / Bluetooth Remote Control
-- **Current State**: Scorers must tap the screen to make changes.
-- **Improvement**:
-  - Map phone volume buttons or Bluetooth shutter remotes:
-    - `Volume Up`: Quick Zoom cycle (1x -> 2x -> 3x).
-    - `Volume Down`: Trigger instant Boundary animation or dismiss banners.
+### 1.4 Persistent Browser Scraping Memory Leak Prevention
+- **Current State**: In [`cricheroes-service.js`](file:///d:/CricketLive/CricLive/cricheroes-service.js), Playwright maintains a persistent Chromium tab with canvas hooks running for hours during a match.
+- **Root Cause**: Extended canvas scraping in Chromium accumulates DOM nodes, listener closures, and context objects over a 4-hour match.
+- **Proposed Solution**:
+  - Schedule an automated garbage-collection cycle: close and spawn a fresh incognito browser context every 45 minutes or 30 overs.
+  - Keep the last known state cached in memory during the 2-second browser reload so the broadcast overlay never experiences a flicker.
 
 ---
 
-## 5. Summary Priority Matrix & Implementation Status
+## 2. 🟡 Major Improvements (Core Broadcast Features & Production Value)
 
-| Category | Recommended Feature | Impact | Status |
-| :--- | :--- | :--- | :--- |
-| **Stream Stability** | Dynamic Bitrate & Auto-Reconnect (Up to 5 Retries with Backoff) | 🔴 Critical | ✅ **Implemented** |
-| **Operator UX** | Tripod Touch Lock / Accidental Tap Protection (`🔒 Lock` shield) | 🟡 High | ✅ **Implemented** |
-| **Stream Health HUD** | Diagnostics HUD (Real-time Throughput Bitrate + Battery % Status) | 🟡 High | ✅ **Implemented** |
-| **Broadcast Privacy** | Privacy Break Screen (`⏸ Break` Innings / Intermission Screen) | 🟡 High | ✅ **Implemented** |
-| **Monetization** | Sponsor Logo / Partner Marquee Rotation (Every 12s on scorebar) | 🟢 High Value | ✅ **Implemented** |
-| **Data Integrity** | DLS Rain Interruption Target Calculation (`TARGET (DLS)`) | 🟢 High Value | ✅ **Implemented** |
-| **Production** | Digital Sound FX Mixing into RTMP Audio | 🟡 High | 📋 Roadmap |
-| **Stream Privacy** | Auto Do Not Disturb / Notification Blocker | 🔴 Critical | 📋 Roadmap |
+Major improvements deliver significant production capabilities, audio enhancements, multi-platform streaming, and offline integrity.
+
+### 2.1 Direct Digital Audio Mixing (Mic Commentary + Sound Effects)
+- **Current State**: Live stream audio records directly from the phone microphone. Event sounds (boundary horn, wicket siren) play through web audio on the speaker, causing ambient feedback or echo.
+- **Proposed Solution**:
+  - Implement a dual-channel digital audio mixer in Android:
+    - **Channel A**: Hardware microphone with noise suppressor (`AudioEffect.EFFECT_TYPE_NS`) and acoustic echo canceller (`AcousticEchoCanceler`).
+    - **Channel B**: Direct digital PCM sound effect channel mixing mp3/wav stingers (crowd cheering, boundary music, wicket siren) directly into the RTMP AAC encoder at normalized -6dB.
+  - Independent volume sliders in the camera UI for Commentary and Match Sound FX.
+
+### 2.2 Dual Recording: Simultaneous Local MP4 Capture
+- **Current State**: Video is pushed directly to YouTube Live via RTMP. If the cellular connection drops in an area without cell coverage, footage during the drop is lost on YouTube.
+- **Proposed Solution**:
+  - Enable simultaneous local MP4 recording directly to phone storage (`Environment.DIRECTORY_MOVIES/CricLive/`) using RootEncoder's `record(path)`.
+  - Ensures a pristine 1080p/4K master recording with baked-in live scores is saved locally on the device regardless of internet drops, allowing immediate post-match highlight editing.
+
+### 2.3 SRT (Secure Reliable Transport) & RIST Protocol Support
+- **Current State**: The application streams via RTMP (`rtmp://`).
+- **Proposed Solution**:
+  - Add SRT (`srt://`) protocol support. SRT uses ARQ (Automatic Repeat reQuest) packet recovery and UDP, making it drastically superior to RTMP over lossy 4G/5G mobile connections with high jitter.
+  - Supported natively by YouTube Live, OBS, and vMix.
+
+### 2.4 Multi-Destination Streaming (YouTube + Facebook Live)
+- **Current State**: Streams to a single RTMP destination (YouTube).
+- **Proposed Solution**:
+  - Allow operators to input a secondary RTMP stream URL and key (e.g. Facebook Live or Twitch).
+  - Implement dual-socket RTMP dispatch so ground matches can broadcast to both YouTube and the club's Facebook page simultaneously without duplicating encoder workload.
+
+### 2.5 Scraper JSON Schema Validation & Fallback Alerting
+- **Current State**: Extracts scores from canvas `fillText` and DOM elements every 4 seconds.
+- **Proposed Solution**:
+  - Enforce strict JSON schema validation on the scraped payload.
+  - If CricHeroes alters frontend classes or canvas layout:
+    1. If extraction fails 3 consecutive times, alert the operator with a non-intrusive badge (`⚠️ Reader Syncer Stalled`).
+    2. Automatically fall back to manual score adjustment mode without terminating the live video stream.
+
+### 2.6 Dynamic Run-Rate & Manhattan Over-by-Over Charts
+- **Current State**: Only numerical current over bubbles are shown.
+- **Proposed Solution**:
+  - Add an operator toggle for an "Over Summary" bar chart (Manhattan graph) between overs or during drinks breaks, displaying runs scored per over for both teams.
+
+---
+
+## 3. 🟢 Minor Improvements (UI/UX Polish & Operational Convenience)
+
+Minor improvements refine operator workflow, visual presentation, and match ergonomics.
+
+### 3.1 Broadcast Stinger Transitions & Celebration Wipes
+- **Current State**: Boundary banners appear as floating rounded cards for 3.5 seconds.
+- **Proposed Solution**:
+  - Implement high-energy TV broadcast stinger wipes (full-screen angled bar sweep with sound effect) when:
+    - Batter completes a half-century (50) or century (100).
+    - Team score reaches milestones (50, 100, 150, 200).
+    - Maiden over is completed.
+
+### 3.2 Player Profile Photos / Avatar Badges
+- **Current State**: Striker and bowler are represented by text names only.
+- **Proposed Solution**:
+  - Display circular player portrait thumbnails or jersey numbers next to batter and bowler names when available from the CricHeroes scorecard.
+
+### 3.3 Hardware Volume Buttons as Physical Shutter & Zoom Remotes
+- **Current State**: Operators must tap the screen to cycle camera zoom or trigger boundaries.
+- **Proposed Solution**:
+  - Intercept hardware key events in `MainActivity`:
+    - `Volume Up`: Cycle zoom presets (1x -> 2x -> 3x -> 1x).
+    - `Volume Down`: Trigger instant boundary animation or dismiss banners.
+  - Compatible with cheap Bluetooth shutter selfie remotes clamped to the tripod handle.
+
+### 3.4 Automatic "Do Not Disturb" (DND) Mode During Streaming
+- **Current State**: Incoming WhatsApp calls, SMS banners, or notification heads-up can pop up over the screen while streaming.
+- **Proposed Solution**:
+  - Request `NotificationManager.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS`.
+  - Automatically activate `INTERRUPTION_FILTER_PRIORITY` or `INTERRUPTION_FILTER_NONE` upon starting the stream and restore normal phone notifications when the stream stops.
+
+### 3.5 Detailed Bowler Spell Tracker
+- **Current State**: Displays bowler's total match figures (`overs`, `maidens`, `runs`, `wickets`, `eco`).
+- **Proposed Solution**:
+  - Add spell-specific tracking (e.g. *"Current Spell: 2.0-0-8-1"* alongside overall figures *"Match: 4.0-0-26-2"*).
+
+---
+
+## 4. ⚪ Trivial Improvements (Micro-interactions & Code Hygiene)
+
+Trivial improvements consist of small aesthetic touches, feedback sounds, and minor cleanup items.
+
+### 4.1 Haptic Feedback on Camera & UI Toggles
+- Provide gentle vibration (`VibrationEffect.EFFECT_CLICK`) when:
+  - Tapping zoom preset buttons (`1x`, `2x`, `4x`).
+  - Engaging / Disengaging Tripod Touch Guard (`🔒 Lock`).
+  - Tapping `⏸ Break Screen`.
+
+### 4.2 Score Number Ticker Micro-Animation
+- Add CSS flip/roll animation or smooth counter increment when runs update (e.g. `128` smoothly rolls to `132` upon hitting a four).
+
+### 4.3 Automatic Clipboard URL Sanitization
+- When pasting CricHeroes URLs into the control panel or mobile sync dialog, auto-strip extraneous tracking parameters (e.g. `?utm_source=whatsapp&ref=share`).
+
+### 4.4 Tooltips on Control Panel Buttons
+- Add clean micro-tooltips over control panel icon buttons to assist first-time match scorers.
+
+### 4.5 Clean Up Unused Deprecations in Kotlin Code
+- Replace `Preview.Builder.setTargetAspectRatio(AspectRatio.RATIO_16_9)` with `ResolutionSelector.Builder` in CameraX 1.3+ to eliminate compile-time warnings.
+
+---
+
+## 5. Comprehensive Prioritization & Implementation Matrix
+
+| Tier | Improvement Area | Key Benefit | Impact | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Critical** | Dynamic Adaptive Bitrate (ABR) | On-the-fly encoder step down prevents buffering on congested 4G/5G | 🔴 Crucial | ✅ **Implemented** |
+| **Critical** | Stream Auto-Reconnect with Exponential Backoff | Recovers gracefully from mobile tower drops (up to 5 retries) | 🔴 Crucial | ✅ **Implemented** |
+| **Critical** | Device Thermal Protection & Warning HUD | Real-time battery temperature monitor + alert badge prevents shutdowns | 🔴 Crucial | ✅ **Implemented** |
+| **Critical** | Android 14+ Foreground Life-cycle Guard | Eliminates OS process kills during long matches | 🔴 Crucial | ✅ **Implemented** |
+| **Critical** | Scraper Context Memory Recycle | Prevents backend browser crashes on 4+ hour games | 🔴 Crucial | ✅ **Implemented** |
+| **Major** | Tripod Touch Guard / Screen Lock Shield | Locks all gestures, preventing accidental tripod/sweat touches | 🟡 High | ✅ **Implemented** |
+| **Major** | Privacy Shield / Broadcast Break Screen | One-tap intermission screen prevents personal phone leaks | 🟡 High | ✅ **Implemented** |
+| **Major** | DLS Rain Interruption Target Calculation | Dedicated DLS target calculation and `TARGET (DLS)` display | 🟡 High | ✅ **Implemented** |
+| **Major** | Commercial Partner Marquee Carousel | Rotating sponsor badge on scorebar every 12 seconds | 🟡 High | ✅ **Implemented** |
+| **Major** | Direct Digital Audio Mixing (Mic + FX) | Pristine broadcast sound without room echo | 🟡 High | 📋 Planned |
+| **Major** | Concurrent Local Master MP4 Recording | Protects match footage if cellular drops | 🟡 High | 📋 Planned |
+| **Major** | SRT Protocol Streaming Ingest | Ultra-stable transmission over lossy mobile networks | 🟡 High | 📋 Planned |
+| **Major** | Multi-Destination Streaming (YT + FB) | Expands audience to Facebook & YouTube | 🟡 High | 📋 Planned |
+| **Major** | Manhattan & Run-Rate Charts | Television-style interval analysis | 🟡 High | 📋 Planned |
+| **Minor** | Hardware Volume / Bluetooth Shutter Remote | Tripod-friendly zoom & break toggle without touching phone | 🟢 Medium | ✅ **Implemented** |
+| **Minor** | Auto "Do Not Disturb" (DND) Guidance | Alerts operator to silence notifications before going live | 🟢 Medium | ✅ **Implemented** |
+| **Minor** | Broadcast Stinger Celebration Wipes | Adds high-energy TV graphics to 50s and 100s | 🟢 Medium | 📋 Planned |
+| **Minor** | Player Avatar / Portrait Badges | Personalizes batter and bowler statistics | 🟢 Medium | 📋 Planned |
+| **Minor** | Detailed Bowler Spell Tracker | Differentiates current spell from match totals | 🟢 Medium | 📋 Planned |
+| **Trivial** | Haptic Feedback on Preset Taps | Physical confirmation for outdoor operators | ⚪ Polish | ✅ **Implemented** |
+| **Trivial** | Score Ticker Micro-Roll Animation | Premium visual feel on boundary scoring | ⚪ Polish | 📋 Planned |
+| **Trivial** | Clipboard Auto-Sanitizer | Saves operator time when pasting match URLs | ⚪ Polish | 📋 Planned |
+| **Trivial** | Control Panel Micro-Tooltips | Better onboarding for non-technical scorers | ⚪ Polish | 📋 Planned |

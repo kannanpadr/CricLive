@@ -2,11 +2,11 @@
 
 ## 1. Executive Summary
 
-**CricLive** is an end-to-end live cricket scoring, broadcast overlay, and mobile streaming ecosystem. It bridges live cricket scoring platforms (primarily [CricHeroes](https://cricheroes.com)) with live video streams (YouTube Live via RTMP/OBS) and provides real-time broadcast graphics, manual operator controls, and mobile camera mixing.
+**CricLive** is a unified, end-to-end cricket live-scoring, broadcast overlay, and mobile video streaming platform. It connects real-time cricket scoring engines (primarily [CricHeroes](https://cricheroes.com)) with live video streams (YouTube Live via RTMP or OBS Studio) to deliver TV-quality broadcast graphics, manual scorer controls, and smartphone-based live video production.
 
 ```mermaid
 graph TD
-    subgraph Data Layer
+    subgraph Data & Sync Layer
         CH[CricHeroes Live Match URL] -->|Cloudflare Protected| MS[Android 4G Syncer\nMobileCricHeroesSyncer]
         CH -->|Headless Browser Fallback| PS[Node.js Playwright Service\ncricheroes-service.js]
     end
@@ -20,14 +20,17 @@ graph TD
     subgraph Presentation & Control Layer
         SRV -->|GET /api/score & Polling| CP[Operator Control Panel\nindex.html]
         SRV -->|Broadcast Sync Channel| OV[Live Broadcast Overlay\noverlay.html]
-        CP -->|Manual Override / Themes| OV
+        CP -->|Manual Override / Themes / DLS / Sponsors| OV
     end
 
-    subgraph Mobile Live Broadcast
-        CAM[Hardware CameraX\nRear Camera 16:9] --> MIX[Compositor / Surface View]
-        OV -->|Transparent WebView| MIX
+    subgraph Mobile Live Broadcast Studio
+        CAM[Hardware CameraX\nRear Camera 16:9 Widescreen] --> MIX[Compositor / Surface View]
+        OV -->|Transparent WebView Layer| MIX
         MIX -->|MediaProjection Screen Capture| RTMP[RtmpStreamService\nRootEncoder Library]
-        RTMP -->|RTMP Push 1080p/1440p/4K| YT[YouTube Live RTMP Ingest]
+        RTMP -->|RTMP Push 1080p / 1440p / 4K| YT[YouTube Live Ingest]
+        HUD[Diagnostics HUD\nBitrate + Battery] -.-> MIX
+        LOCK[Tripod Touch Guard\nScreen Lock Shield] -.-> MIX
+        BREAK[Broadcast Break Screen\nIntermission Graphic] -.-> MIX
     end
 ```
 
@@ -35,80 +38,116 @@ graph TD
 
 ## 2. Core Functional Modules
 
-### 2.1 Backend & CricHeroes Sync Engine
+### 2.1 Backend Server & Sync Engine (`server.js`)
 
-The backend is built with Node.js and Express in [`server.js`](file:///d:/CricketLive/CricLive/server.js) supported by [`cricheroes-service.js`](file:///d:/CricketLive/CricLive/cricheroes-service.js).
+The backend is built with Node.js and Express in [`server.js`](file:///d:/CricketLive/CricLive/server.js) with support from [`cricheroes-service.js`](file:///d:/CricketLive/CricLive/cricheroes-service.js).
 
 | Feature | Implementation | Description |
 | :--- | :--- | :--- |
-| **Canvas Scraping Engine** | [`cricheroes-service.js`](file:///d:/CricketLive/CricLive/cricheroes-service.js) | Injects hooks into `CanvasRenderingContext2D.prototype.fillText` to extract live scores, run counts, overs, and ball tracking drawn to HTML5 canvas. |
-| **Mobile 4G Bypass Syncer** | [`MobileCricHeroesSyncer`](file:///d:/CricketLive/CricLive/android/app/src/main/kotlin/com/cktscoredemo/MainActivity.kt) | Bypasses Cloudflare datacenter IP blocks by leveraging the user's mobile cellular connection on Android to extract DOM/canvas state and push it to `/api/mobile-sync`. |
-| **Live State REST API** | `/api/score` & `/api/update` | Exposes normalized match state (teams, score, overs, CRR, projected score, target, batters, bowler, delivery bubbles, tournament). |
-| **Cross-Tab Synchronization** | `BroadcastChannel('ckt_score_sync')` | Propagates instantaneous updates between the operator control dashboard and broadcast overlays across browser tabs and WebViews. |
+| **REST API Server** | Express.js (`PORT 3000`) | Provides REST endpoints for match score state, configuration, manual overrides, and debug telemetry. |
+| **Canvas Scraping Engine** | [`cricheroes-service.js`](file:///d:/CricketLive/CricLive/cricheroes-service.js) | Hooks into `CanvasRenderingContext2D.prototype.fillText` within a persistent headless Chromium instance to extract live runs, balls, bowler statistics, and delivery bubbles drawn to HTML5 canvas. |
+| **Mobile 4G Bypass Syncer** | [`MobileCricHeroesSyncer`](file:///d:/CricketLive/CricLive/android/app/src/main/kotlin/com/cktscoredemo/MainActivity.kt) | Bypasses Cloudflare anti-bot datacenter IP blocks by utilizing the mobile operator's 4G/5G cellular IP address inside an invisible Android WebView, pushing updates to `/api/mobile-sync`. |
+| **Cross-Tab Synchronization** | `BroadcastChannel('ckt_score_sync')` | Propagates instantaneous updates between the operator control dashboard and broadcast overlays across browser tabs and WebViews without polling delay. |
+| **Offline Asset Serving** | Express Static (`public/`) | Serves both the web control panel (`index.html`) and transparent overlay (`overlay.html`) with zero external CDN runtime dependencies. |
 
 ---
 
-### 2.2 Operator Control Panel ([`public/index.html`](file:///d:/CricketLive/CricLive/public/index.html))
+### 2.2 Operator Control Panel (`public/index.html`)
 
-The control panel provides a dashboard for match operators, scorers, and producers:
+The control panel provides an intuitive dashboard for match producers, scorers, and ground commentators:
 
-- **Automated Score Sync**: One-click CricHeroes match URL input with automated live polling intervals.
-- **Manual Score Adjustments**: Manual score increments (+1, +4, +6, Wicket, Extras), batter strike toggles, and bowler overs management.
-- **Innings Logic**:
-  - *1st Innings*: Shows Current Run Rate (CRR) and Projected Score. Hides Target and Chase equation.
-  - *2nd Innings*: Automatically computes and displays Target, Required Run Rate (RRR), and ball-by-ball chase status.
-- **Branding & Visual Customization**: Team name editors, custom team colors (primary/secondary), tournament title, venue, and overlay opacity.
+1. **Automated Match Sync**:
+   - Single-click CricHeroes scorecard URL input.
+   - Configurable polling intervals (2s, 4s, 5s, 10s, 15s).
+   - Real-time connection indicators (Green = Connected, Amber = Stale, Red = Offline).
+
+2. **Manual Scoring & Override Controls**:
+   - Quick run increments (+1, +4, +6, Dot, Wicket, Extras).
+   - Striker / Non-striker rotation and batter selection.
+   - Bowler figures and current over delivery management.
+
+3. **Innings & Chase Situations**:
+   - *1st Innings*: Displays Current Run Rate (CRR) and Projected Score. Hides Target.
+   - *2nd Innings*: Automatically calculates Target, Required Run Rate (RRR), and ball-by-ball equation ("Need X runs off Y balls").
+
+4. **Rain Interruption & DLS Target Support**:
+   - Dedicated field to input DLS revised targets.
+   - When set, automatically updates the overlay to show `TARGET (DLS)` and revised chase equations.
+
+5. **Commercial Partner & Sponsor Management**:
+   - Comma-separated sponsor input field (e.g. *"Title Sponsor: ABC Motors, Powered By: XYZ Sports"*).
+   - Propagates sponsor rotations directly to the broadcast scorebar.
+
+6. **Visual & Theme Customization**:
+   - Preset themes (Electric Blue, Blue/Gold Professional, Minimal Dark).
+   - Team color picker with live HEX swatch preview.
+   - Background opacity slider (50% to 100%) and layout toggles.
 
 ---
 
-### 2.3 Live Broadcast Overlay ([`public/overlay.html`](file:///d:/CricketLive/CricLive/public/overlay.html))
+### 2.3 Live Broadcast Overlay Engine (`public/overlay.html`)
 
-Designed for transparent chroma/alpha mixing in OBS Studio or mobile camera broadcasting.
+Designed for transparent chroma/alpha mixing in OBS Studio, vMix, or inside the native mobile app:
 
-#### UI Elements:
-1. **Slender Top Ribbon**: Displays trophy icon, tournament title, venue name, 1st/2nd Innings badge, and compact live status indicator.
-2. **Hero Score Hub**: High-contrast runs/wickets display, overs counter, CRR, Projected score, and Chase equation banner.
+1. **Slender Top Ribbon**:
+   - Tournament trophy icon, championship title, venue name.
+   - Dynamic 1st/2nd Innings badge (`chase-active`).
+   - Stale data alert pill (`⚠️ DELAYED`) if live score stops updating.
+   - Rotating sponsor marquee slot (`🤝 Partner`).
+
+2. **Hero Score Hub**:
+   - High-contrast, tabular-numeral runs and wickets (`128/3`).
+   - Overs indicator in cyan accent (`15.2 OV`).
+   - Equation pills: CRR, Projected total, Target (`TARGET (DLS)` when applicable), and live chase ticker.
+   - Sponsor pill (`PARTNER: [Name]`) cycling every 12 seconds with fade animation.
+
 3. **Docked Player Stats Bar**:
-   - Striker / Non-striker indicators (`*`), player runs, balls faced, 4s, 6s, and Strike Rate.
-   - Active bowler figures: overs, maidens, runs conceded, wickets, and economy rate.
-   - This Over delivery bubbles: Color-coded pills for dots (`•`), boundaries (`4` green, `6` purple), and wickets (`W` red).
-4. **Dynamic Event Pop-Up Banners**: Animated overlays triggered on boundaries (4/6), milestones (50/100), and wickets.
+   - **Batters Box**: Active striker indicated with arrow (`▶`) and asterisk (`*`), runs, balls, 4s, 6s, and calculated Strike Rate.
+   - **Bowler Box**: Bowler name, overs bowled, maidens, runs conceded, wickets taken, and economy rate.
+   - **This Over Deliveries**: Color-coded delivery bubbles:
+     - Dot ball: Dark subtle pill (`•`)
+     - Four: Vibrant green gradient with glow (`4`)
+     - Six: Golden amber gradient with glow (`6`)
+     - Wicket: Crimson red pill (`W`)
 
-#### Floating Operator Controls (Left Side):
-- **Gear Setting Icon (`⚙`)**: Docked on the left side (`top: 10px; left: 10px`), opens the overlay toolbar on demand.
-- **Size Options**: Toggle between **Slim Bar** (compact layout for mobile/lower thirds) and **Full** (complete match card).
-- **Scale Selector**: Dropdown selector (`<select id="scaleSelect">`) with direct quick toggles for **78%** (default) and **90%** (large).
-- **Position Toggle**: Shifts overlay docking between **Bottom** and **Top** of the screen.
+4. **Operator Overlay Toolbar (Docked Left)**:
+   - Discreet floating gear button (`⚙`) on top-left (`top: 10px; left: 10px`).
+   - Layout modes: **Slim Bar** (minimal lower-third) vs **Full** (complete match card).
+   - Scale selector: **78%** (default non-obstructive) and **90%** (large television broadcast).
+   - Position toggle: Instantly shifts overlay between **Bottom** and **Top** of screen.
 
 ---
 
-### 2.4 Android Mobile Broadcast Application ([`MainActivity.kt`](file:///d:/CricketLive/CricLive/android/app/src/main/kotlin/com/cktscoredemo/MainActivity.kt))
+### 2.4 Android Mobile Broadcast Studio (`MainActivity.kt` & `RtmpStreamService.kt`)
 
-The Android app transforms any Android phone into a portable cricket broadcast studio:
+Transforms an Android smartphone into a complete, standalone live cricket broadcasting unit:
 
 #### 1. Hardware Camera & Fullscreen Composition
-- **Rear Camera Lock**: Uses `CameraSelector.LENS_FACING_BACK` with continuous auto-focus.
-- **16:9 Aspect Ratio**: Locked CameraX preview pipeline (`AspectRatio.RATIO_16_9`) with `ScaleType.FILL_CENTER` matching standard broadcast standards.
-- **Edge-to-Edge Cutout Support**: Configured with `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES` and `setDecorFitsSystemWindows(window, false)` to prevent black letterbox borders around display notches and camera cutouts.
-- **Camera Controls**: Pinch-to-zoom and floating vertical zoom bar supporting 1x, 2x, 4x presets up to 8x digital zoom.
+- **Rear Camera Lock**: Permanently locked to the high-resolution rear lens (`CameraSelector.LENS_FACING_BACK`) for tripod stability.
+- **16:9 Broadcast Aspect Ratio**: Locked CameraX preview pipeline (`AspectRatio.RATIO_16_9`) with `ScaleType.FILL_CENTER` matching YouTube Live widescreen.
+- **Edge-to-Edge Display Cutout Integration**: Configured with `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES` and `setDecorFitsSystemWindows(window, false)` to eliminate black pillarbox bars on notched displays.
+- **Camera Zoom Controls**: Smooth pinch-to-zoom and thumb-friendly vertical zoom bar with quick presets (1x, 2x, 4x, 8x).
+- **Flashlight / Torch**: One-tap toggle for night matches or low-light evening conditions.
 
-#### 2. YouTube Live RTMP Ingestion ([`RtmpStreamService.kt`](file:///d:/CricketLive/CricLive/android/app/src/main/kotlin/com/cktscoredemo/RtmpStreamService.kt))
-- **Foreground Streaming Service**: High-performance screen-capture and microphone-mixing service powered by the RootEncoder library (`RtmpDisplay`).
-- **Endpoint Configuration**:
-  - Default RTMP endpoint: `rtmp://a.rtmp.youtube.com/live2` (no port 443 required).
-  - Sanitization logic preserves raw `rtmp://` endpoints without forcing encryption or port substitution.
+#### 2. YouTube Live RTMP Ingestion Engine
+- **Hardware-Accelerated Service**: Uses RootEncoder (`RtmpDisplay`) to mix the CameraX surface, web overlay, and microphone into H.264 video + AAC audio.
+- **Standardized RTMP Endpoint**: Default `rtmp://a.rtmp.youtube.com/live2` without forced port 443 or TLS substitution.
 - **Resolution & Bitrate Profiles**:
-  | Profile | Dimensions | Bitrate | Framerate |
-  | :--- | :--- | :--- | :--- |
-  | **1080p FHD** | 1920 × 1080 | 5,000 Kbps | 30 FPS |
-  | **1440p QHD** | 2560 × 1440 | 9,000 Kbps | 30 FPS |
-  | **2160p 4K** | 3840 × 2160 | 18,000 Kbps | 30 FPS |
-- **Audio Mixing**: Optional commentary audio toggle mixing the phone microphone at 128 kbps 44.1 kHz AAC.
-- **Status HUD**: Ultra-compact top bar displaying `LIVE` indicator, elapsed broadcast duration timer, and connection progress.
+  | Quality Profile | Resolution | Bitrate | FPS | Recommended Network |
+  | :--- | :--- | :--- | :--- | :--- |
+  | **1080p FHD** | 1920 × 1080 | 5,000 Kbps | 30 | Standard 4G LTE |
+  | **1440p QHD** | 2560 × 1440 | 9,000 Kbps | 30 | High-speed 4G / 5G |
+  | **2160p 4K** | 3840 × 2160 | 18,000 Kbps | 30 | High-capacity 5G / Fiber Wi-Fi |
+
+#### 3. Broadcast Resilience & Operator Ergonomics
+- **Automatic Reconnection (4G Resilience)**: Up to 5 automatic retry attempts with exponential backoff (2s, 4s, 6s, 8s) upon network dips or cell tower handoffs.
+- **Tripod Touch Guard / Screen Lock Mode**: Dedicated `🔒 Lock` button activates an invisible input shield preventing accidental touches from tripod clamps, sweat, or rain. Tap-to-unlock overlay banner.
+- **Live Stream Health Diagnostics HUD**: Real-time throughput bitrate gauge (`5.2M` / `850k`) and device battery percentage (`🔋84%`) displayed directly in the top status pill.
+- **Privacy Shield / Break Screen**: One-tap `⏸ Break` toggle replaces live camera feed with an intermission graphic (*"INNINGS BREAK / TECHNICAL PAUSE"*) so operators can adjust equipment or check phone messages without live broadcast leaks.
 
 ---
 
-## 3. Data Dictionary: Live Match State Object
+## 3. Data Dictionary: Live Match State Schema
 
 ```json
 {
@@ -116,38 +155,79 @@ The Android app transforms any Android phone into a portable cricket broadcast s
   "bowling_team": "CENTURY CC",
   "score": "128/3",
   "overs": "15.2",
+  "totalOvers": 20,
   "crr": "8.35",
   "projected": "167",
   "target": 182,
+  "dlsTarget": 142,
+  "dlsApplied": false,
   "chase": "Need 54 off 28b",
-  "tournament": "IISC Champions League 2026",
+  "tournament": "IISC Champions League – ICL 2026",
   "venue": "Gymkhana Ground, Bengaluru",
+  "sponsors": "Title Sponsor: ABC Motors, Powered By: XYZ Sports",
   "status": "LIVE",
   "currentInnings": 2,
   "batters": [
-    { "name": "Rahul Sharma", "runs": 48, "balls": 32, "fours": 5, "sixes": 2, "strikeRate": "150.0", "striker": true },
-    { "name": "Arun Kumar", "runs": 22, "balls": 18, "fours": 2, "sixes": 0, "strikeRate": "122.2", "striker": false }
+    {
+      "name": "Rahul Sharma",
+      "runs": 48,
+      "balls": 32,
+      "fours": 5,
+      "sixes": 2,
+      "strikeRate": "150.0",
+      "striker": true
+    },
+    {
+      "name": "Arun Kumar",
+      "runs": 22,
+      "balls": 18,
+      "fours": 2,
+      "sixes": 0,
+      "strikeRate": "122.2",
+      "striker": false
+    }
   ],
   "bowler": {
-    "name": "Vikram Sen", "overs": "3.2", "maidens": 0, "runs": 26, "wickets": 2, "eco": "7.80"
+    "name": "Vikram Sen",
+    "overs": "3.2",
+    "maidens": 0,
+    "runs": 26,
+    "wickets": 2,
+    "eco": "7.80"
   },
-  "this_over": ["1", "4", "0", "2", "6", "1"]
+  "this_over": ["1", "4", "•", "2", "6", "W"],
+  "isStale": false
 }
 ```
 
 ---
 
-## 4. Operational Workflows
+## 4. API Specification
 
-### 4.1 Match Day Setup (Mobile Only)
-1. Install [CricLive.apk](file:///d:/CricketLive/CricLive/CricLive.apk) on the broadcasting Android smartphone.
-2. Launch the app and tap **📱 4G Sync** to input the CricHeroes live scorecard link.
+| Endpoint | Method | Payload / Params | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/score` | `GET` | None | Returns normalized match state JSON for overlay and control panels. |
+| `/api/update` | `POST` | `matchState` partial object | Updates match score, batters, bowler, or situation manually. |
+| `/api/mobile-sync` | `POST` | Extracted CricHeroes state | Receives mobile-extracted data from Android 4G syncer. |
+| `/api/config` | `POST` | `{ matchUrl, tournament, venue, totalOvers, currentInnings }` | Sets active match configuration and scraper target URL. |
+| `/api/overlay-settings` | `POST` | Theme, layout, colors, opacity | Updates overlay presentation styles across all active clients. |
+| `/health` | `GET` | None | Returns server health status and process uptime. |
+
+---
+
+## 5. Operational Workflows
+
+### 5.1 Mobile Ground Broadcast (Single Android Phone)
+1. Install [CricLive.apk](file:///d:/CricketLive/CricLive/CricLive.apk) on the broadcasting smartphone.
+2. Open the app, tap **📱 4G Sync**, and paste the CricHeroes match URL.
 3. Tap **📹 Live Cam** to enter landscape broadcast mode.
-4. Tap **🔴 Stream to YouTube**, enter your YouTube Stream Key, select resolution (**1080p FHD**, **1440p QHD**, or **2160p 4K**), and tap **Start YouTube Stream**.
-5. The mixed video feed with transparent live scores will broadcast directly to your YouTube channel.
+4. Tap **🔴 Stream to YouTube**, enter YouTube Stream Key, select resolution (**1080p**, **1440p**, or **2160p**), and start streaming.
+5. Tap **🔒 Lock** to activate Tripod Touch Guard once the phone is clamped onto the tripod.
+6. During breaks, tap **⏸ Break** to display the intermission screen while adjusting equipment.
 
-### 4.2 Match Day Setup (Studio / OBS Production)
-1. Start the Node.js server with `npm start`.
+### 5.2 Studio / OBS Production Setup
+1. Launch the server using `npm start`.
 2. Open [`http://localhost:3000`](http://localhost:3000) for operator controls.
-3. In OBS Studio, add a **Browser Source** pointing to `http://localhost:3000/overlay.html`.
-4. Set OBS Browser Source resolution to `1920x1080` and enable transparency.
+3. In OBS Studio or vMix, create a **Browser Source** pointing to `http://localhost:3000/overlay.html`.
+4. Set dimensions to `1920x1080` with background transparency enabled.
+5. Overlay updates automatically via `BroadcastChannel` and polling.

@@ -99,6 +99,9 @@ class RtmpStreamService : Service(), ConnectChecker {
     private var userRequestedStop = false
     private var currentEndpoint: String = ""
     private var currentBitrate: Int = 2500 * 1024
+    private var originalTargetBitrate: Int = 2500 * 1024
+    private var isAdaptiveBitrateEnabled: Boolean = true
+    private var lowBitrateCount: Int = 0
 
     private val timerRunnable = object : Runnable {
         override fun run() {
@@ -144,6 +147,8 @@ class RtmpStreamService : Service(), ConnectChecker {
             val bitrate = intent.getIntExtra(EXTRA_BITRATE, 2500 * 1024)
             val enableAudio = intent.getBooleanExtra(EXTRA_AUDIO, true)
             currentBitrate = bitrate
+            originalTargetBitrate = bitrate
+            lowBitrateCount = 0
 
             // Start foreground immediately
             val notification = buildNotification("Preparing YouTube Live Stream...")
@@ -370,9 +375,29 @@ class RtmpStreamService : Service(), ConnectChecker {
 
     override fun onNewBitrate(bitrate: Long) {
         mainHandler.post {
+            val kbps = bitrate / 1000
             _streamState.value = _streamState.value.copy(
-                bitrateKbps = bitrate / 1000
+                bitrateKbps = kbps
             )
+            // Adaptive Bitrate: If bandwidth drops under 40% of target for 4 consecutive reports, step down
+            if (isAdaptiveBitrateEnabled && _streamState.value.isStreaming && rtmpDisplay != null) {
+                val targetKbps = (currentBitrate / 1024).toLong()
+                if (kbps in 1 until (targetKbps * 4 / 10)) {
+                    lowBitrateCount++
+                    if (lowBitrateCount >= 4) {
+                        val steppedDown = (currentBitrate * 0.7).toInt().coerceAtLeast(1500 * 1024)
+                        if (steppedDown < currentBitrate) {
+                            currentBitrate = steppedDown
+                            try {
+                                rtmpDisplay?.setVideoBitrateOnFly(steppedDown)
+                            } catch (_: Exception) {}
+                        }
+                        lowBitrateCount = 0
+                    }
+                } else if (kbps > (targetKbps * 8 / 10)) {
+                    lowBitrateCount = 0
+                }
+            }
         }
     }
 
