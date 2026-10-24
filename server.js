@@ -316,7 +316,7 @@ function getEnrichedState() {
       matchState.striker ? { ...matchState.striker, striker: true } : { name: "—", runs: 0, balls: 0, fours: 0, sixes: 0, striker: true },
       matchState.nonStriker ? { ...matchState.nonStriker, striker: false } : { name: "—", runs: 0, balls: 0, fours: 0, sixes: 0, striker: false }
     ],
-    this_over: matchState.thisOver || matchState.recentBalls || [],
+    this_over: Array.isArray(matchState.thisOver) ? matchState.thisOver : (Array.isArray(matchState.recentBalls) ? matchState.recentBalls : []),
     status: matchState.status === 'live' ? 'LIVE' : (matchState.status ? matchState.status.toUpperCase() : 'LIVE'),
     updated: new Date(matchState.lastUpdated || Date.now()).toLocaleTimeString()
   };
@@ -439,7 +439,8 @@ app.post(['/api/mobile-sync', '/api/sync-score'], (req, res) => {
         matchUrl: matchUrl,
         lastUpdated: new Date().toISOString(),
         isStale: false,
-        sourceMode: 'mobile_sync'
+        sourceMode: 'mobile_sync',
+        lastMobileSyncTime: Date.now()
       };
 
       recalculateStats();
@@ -524,6 +525,7 @@ app.post(['/api/config', '/config'], (req, res) => {
 // 6. Manual Ball-by-Ball Update
 app.post('/api/ball', (req, res) => {
   pushHistory();
+  matchState.sourceMode = 'manual';
   const { outcome, runs = 0 } = req.body;
   
   const batting = getBattingTeam();
@@ -721,7 +723,11 @@ function startAutoSync() {
   if (global.autoSyncInterval) clearInterval(global.autoSyncInterval);
 
   const runSync = async () => {
-    if (matchState.autoUrlSync && matchState.matchUrl && !isScrapingInProgress) {
+    // If mobile phone sync is actively streaming data (within last 40s), or operator is manually scoring, pause background Playwright scraper to prevent collisions
+    const isMobileSyncActive = matchState.sourceMode === 'mobile_sync' && matchState.lastMobileSyncTime && (Date.now() - matchState.lastMobileSyncTime < 40000);
+    const isManualMode = matchState.sourceMode === 'manual';
+
+    if (matchState.autoUrlSync && matchState.matchUrl && !isScrapingInProgress && !isMobileSyncActive && !isManualMode) {
       isScrapingInProgress = true;
       try {
         const freshData = await scrapeCricHeroesUrl(matchState.matchUrl);

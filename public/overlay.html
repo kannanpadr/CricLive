@@ -1360,18 +1360,24 @@ function render(data = current) {
   }
 
   // 7. This Over Deliveries
-  const balls = s.this_over || s.thisOver || s.recentBalls || defaults.this_over;
+  const balls = Array.isArray(s.this_over) ? s.this_over :
+                (Array.isArray(s.thisOver) ? s.thisOver :
+                (Array.isArray(s.recentBalls) ? s.recentBalls : []));
   const ballsContainer = $("thisOverBalls");
-  if (ballsContainer && Array.isArray(balls)) {
-    ballsContainer.innerHTML = balls.map(b => {
-      let cls = "b-bubble";
-      const val = String(b).trim();
-      if (val === "4") cls += " four";
-      else if (val === "6") cls += " six";
-      else if (val.toUpperCase().includes("W")) cls += " wicket";
-      else if (val === "0" || val === "•") cls += " dot";
-      return `<span class="${cls}">${safe(val)}</span>`;
-    }).join("");
+  if (ballsContainer) {
+    if (balls && balls.length > 0) {
+      ballsContainer.innerHTML = balls.map(b => {
+        let cls = "b-bubble";
+        const val = String(b).trim();
+        if (val === "4") cls += " four";
+        else if (val === "6") cls += " six";
+        else if (val.toUpperCase().includes("W")) cls += " wicket";
+        else if (val === "0" || val === "•") cls += " dot";
+        return `<span class="${cls}">${safe(val)}</span>`;
+      }).join("");
+    } else {
+      ballsContainer.innerHTML = '<span class="b-bubble dot" style="opacity:0.35">—</span>';
+    }
   }
 
   // 8. Stale Status
@@ -1609,17 +1615,11 @@ window.addEventListener('storage', (e) => {
 // =========================================================
 // POLLING (In-App CricHeroes Bridge & /api/score)
 // =========================================================
+let isPollingInProgress = false;
+
 async function pollScore() {
-  // 1. LocalStorage fallback for offline sync
-  try {
-    const localSaved = localStorage.getItem('chCurrentScore');
-    if (localSaved) {
-      const d = JSON.parse(localSaved);
-      if (d && (d.runs !== undefined || d.score)) {
-        render(d);
-      }
-    }
-  } catch (_) {}
+  if (isPollingInProgress) return;
+  isPollingInProgress = true;
 
   const params = new URLSearchParams(location.search);
   const customServer = params.get('server') || localStorage.getItem('server_url');
@@ -1637,10 +1637,11 @@ async function pollScore() {
     endpoints.push('http://192.168.1.9:3000/api/score');
   }
 
+  let fetchedSuccessfully = false;
   for (const url of endpoints) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
       const r = await fetch(url, {
         cache: "no-store",
         signal: controller.signal,
@@ -1651,10 +1652,28 @@ async function pollScore() {
         const d = await r.json();
         render(d);
         if (d.overlaySettings) applySettings(d.overlaySettings);
-        return;
+        // Keep offline cache fresh with the latest valid score
+        try { localStorage.setItem('chCurrentScore', JSON.stringify(d)); } catch (_) {}
+        fetchedSuccessfully = true;
+        break;
       }
     } catch (e) {}
   }
+
+  // Only fall back to local storage if all network endpoints failed AND we have no active score
+  if (!fetchedSuccessfully && (!current || (!current.runs && !current.score))) {
+    try {
+      const localSaved = localStorage.getItem('chCurrentScore');
+      if (localSaved) {
+        const d = JSON.parse(localSaved);
+        if (d && (d.runs !== undefined || d.score)) {
+          render(d);
+        }
+      }
+    } catch (_) {}
+  }
+
+  isPollingInProgress = false;
 }
 
 // =========================================================
@@ -1679,7 +1698,23 @@ function boot() {
     document.body.classList.add("pos-top");
   }
 
-  render(current);
+  // Initial state from cached storage or defaults on startup
+  try {
+    const localSaved = localStorage.getItem('chCurrentScore');
+    if (localSaved) {
+      const d = JSON.parse(localSaved);
+      if (d && (d.runs !== undefined || d.score)) {
+        render(d);
+      } else {
+        render(current);
+      }
+    } else {
+      render(current);
+    }
+  } catch (_) {
+    render(current);
+  }
+
   pollScore();
   setInterval(pollScore, 2000);
 }
