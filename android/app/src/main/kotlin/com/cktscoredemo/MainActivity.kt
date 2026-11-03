@@ -118,6 +118,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import android.view.KeyEvent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import android.widget.Toast
 
 fun triggerHapticFeedback(context: Context) {
     try {
@@ -126,6 +132,24 @@ fun triggerHapticFeedback(context: Context) {
             vibrator?.vibrate(android.os.VibrationEffect.createOneShot(30, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
         }
     } catch (_: Exception) {}
+}
+
+fun getNetworkStrengthInfo(context: Context): Pair<String, String> {
+    try {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val activeNetwork = cm?.activeNetwork ?: return Pair("📶 Standby", "Offline")
+        val caps = cm.getNetworkCapabilities(activeNetwork) ?: return Pair("📶 Connected", "OK")
+        return when {
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> Pair("📶 Wi-Fi", "Stable")
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> {
+                val downSpeed = caps.linkDownstreamBandwidthKbps
+                if (downSpeed >= 12000) Pair("📶 5G/4G", "High") else Pair("📶 4G", "Good")
+            }
+            else -> Pair("📶 Network", "Online")
+        }
+    } catch (_: Exception) {
+        return Pair("📶 4G/LTE", "Good")
+    }
 }
 
 class MainActivity : ComponentActivity() {
@@ -499,6 +523,22 @@ fun CktAppScreen(
                                         }
                                         webViewRef?.loadUrl(target)
                                     }
+                                }
+
+                                @JavascriptInterface
+                                fun stopStreamFromWeb() {
+                                    Handler(Looper.getMainLooper()).post {
+                                        RtmpStreamService.stop(context)
+                                    }
+                                }
+
+                                @JavascriptInterface
+                                fun getBatteryLevel(): Int {
+                                    val batteryFilter = android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
+                                    val batteryStatus = context.registerReceiver(null, batteryFilter)
+                                    val level = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                                    val scale = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+                                    return if (level >= 0 && scale > 0) (level * 100 / scale) else 100
                                 }
                             }, "AndroidScoreBridge")
 
@@ -980,6 +1020,9 @@ fun CameraStreamOverlayScreen(
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var showControls by remember { mutableStateOf(true) }
     var isOverlayControlsOpen by remember { mutableStateOf(false) }
+    var isOverlayVisible by remember { mutableStateOf(true) }
+    var showExposureDialog by remember { mutableStateOf(false) }
+    var currentExposureIndex by remember { mutableIntStateOf(0) }
 
     // Camera Zoom States
     var currentZoomRatio by remember { mutableFloatStateOf(1f) }
@@ -1180,7 +1223,9 @@ fun CameraStreamOverlayScreen(
 
         // LAYER 2: TRANSPARENT CRICKET SCOREBOARD OVERLAY WITH CAMERA GESTURES
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(if (isOverlayVisible) 1f else 0f),
             factory = { ctx ->
                 val scaleGestureDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                     override fun onScale(detector: ScaleGestureDetector): Boolean {
@@ -1248,13 +1293,6 @@ fun CameraStreamOverlayScreen(
                                 onBackToControl()
                             }
                         }
-
-                        @JavascriptInterface
-                        fun setControlsExpanded(expanded: Boolean) {
-                            Handler(Looper.getMainLooper()).post {
-                                isOverlayControlsOpen = expanded
-                            }
-                        }
                     }, "AndroidScoreBridge")
                     webChromeClient = object : WebChromeClient() {
                         override fun onPermissionRequest(request: PermissionRequest?) {
@@ -1272,29 +1310,8 @@ fun CameraStreamOverlayScreen(
                         }
                     }
 
-                    // Smart touch routing:
-                    // If touch is in the overlay controls region (or when controls panel is open),
-                    // allow WebView to process clicks and interactions!
-                    // Outside that area: handle tap-to-focus and pinch-zoom on the camera preview!
-                    setOnTouchListener { v, event ->
-                        val density = ctx.resources.displayMetrics.density
-                        // When overlay control panel is open, cover full panel bounds (up to 700dp and 120dp height)
-                        // When closed, cover top-left area for the floating gear icon
-                        val controlsWidthPx = if (isOverlayControlsOpen) {
-                            maxOf(700f * density, v.width * 0.85f)
-                        } else {
-                            // Generous top-left area so controls open reliably
-                            620f * density
-                        }
-                        val controlsHeightPx = if (isOverlayControlsOpen) 120f * density else 75f * density
-
-                        val isNearOverlayControls = event.x <= controlsWidthPx && event.y <= controlsHeightPx
-                        if (isNearOverlayControls) {
-                            // Let WebView handle the click on the left overlay controls and close button!
-                            return@setOnTouchListener false
-                        }
-
-                        // Feed to gesture detectors for pinch-to-zoom & tap-to-focus
+                    // Feed to gesture detectors for pinch-to-zoom & tap-to-focus
+                    setOnTouchListener { _, event ->
                         val scaled = scaleGestureDetector.onTouchEvent(event)
                         val tapped = gestureDetector.onTouchEvent(event)
                         scaled || tapped
@@ -1456,375 +1473,141 @@ fun CameraStreamOverlayScreen(
             onBackToControl()
         }
 
-        // LAYER 3: FLOATING CAMERA & STREAM CONTROLS (Top Bar)
+        // TOP STATUS BAR (Layout: LIVE/READY, Resolution, FPS, Network Strength, Battery %, Bitrate)
         if (showControls && !isScreenLocked) {
-            Row(
+            val isLive = streamState.isStreaming
+            val (netIcon, netQuality) = getNetworkStrengthInfo(context)
+            val bitrateDisplay = if (isLive) {
+                if (streamState.bitrateKbps >= 1000) {
+                    String.format(Locale.US, "%.1f Mbps", streamState.bitrateKbps / 1000f)
+                } else if (streamState.bitrateKbps > 0) {
+                    "${streamState.bitrateKbps} kbps"
+                } else "0 kbps"
+            } else "0 kbps"
+
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(horizontal = 10.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
-                // Streaming & Camera Action Pills
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Thermal Warning Indicator if device is overheating under sun
-                    if (deviceTempC >= 42.0f) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFFDC2626))
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = "🔥 Overheating ${String.format(Locale.US, "%.1f°C", deviceTempC)}",
-                                fontSize = 9.sp,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    // 🔴 YOUTUBE LIVE STREAMING BUTTON / STATUS PILL
-                    if (streamState.isStreaming) {
-                        // LIVE STATUS PILL WITH HEALTH DIAGNOSTICS (Bitrate + Temp + Battery)
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFE50914))
-                                .clickable {
-                                    triggerHapticFeedback(context)
-                                    showStopConfirmDialog = true
-                                }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(5.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White)
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                                val bitrateStr = if (streamState.bitrateKbps >= 1000) {
-                                    String.format(Locale.US, "%.1fM", streamState.bitrateKbps / 1000f)
-                                } else if (streamState.bitrateKbps > 0) {
-                                    "${streamState.bitrateKbps}k"
-                                } else ""
-                                val tempStr = if (deviceTempC > 0f) " · ${String.format(Locale.US, "%.0f°C", deviceTempC)}" else ""
-                                Text(
-                                    text = "LIVE ${formatDuration(streamState.durationSeconds)}${if (bitrateStr.isNotEmpty()) " · $bitrateStr" else ""}$tempStr · 🔋$batteryLevel%",
-                                    fontSize = 9.sp,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    } else if (streamState.isReconnecting) {
-                        // AUTO-RECONNECTING STATE
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFFB45309))
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = "⏳ Reconnecting (${streamState.reconnectAttempts}/5)...",
-                                fontSize = 9.sp,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    } else if (streamState.isConnecting) {
-                        // CONNECTING STATE
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFFD97706))
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = "⏳ Connecting...",
-                                fontSize = 9.sp,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    } else {
-                        // GO LIVE BUTTON
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFE50914))
-                                .clickable {
-                                    triggerHapticFeedback(context)
-                                    streamKeyValidationError = null
-                                    showStreamSetupDialog = true
-                                }
-                                .padding(horizontal = 9.dp, vertical = 5.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🔴", fontSize = 10.sp)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Stream to YouTube",
-                                    fontSize = 11.sp,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-
-                    // Break / Privacy Screen Toggle
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isBreakScreenActive) Color(0xFFD97706) else Color(0xCC071529))
-                            .clickable {
-                                triggerHapticFeedback(context)
-                                isBreakScreenActive = !isBreakScreenActive
-                            }
-                            .padding(horizontal = 7.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = if (isBreakScreenActive) "▶ Live" else "⏸ Break",
-                            fontSize = 10.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    // Tripod Touch Guard / Screen Lock Toggle
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color(0xCC071529))
-                            .clickable {
-                                triggerHapticFeedback(context)
-                                isScreenLocked = true
-                            }
-                            .padding(8.dp)
-                    ) {
-                        Text("🔒", fontSize = 12.sp)
-                    }
-
-                    // Quick Zoom Cycle Pill (1x -> 2x -> 3x -> 1x)
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xCC071529))
-                            .clickable {
-                                val next = when {
-                                    currentZoomRatio < 1.8f -> 2.0f
-                                    currentZoomRatio < 2.8f -> 3.0f
-                                    else -> 1.0f
-                                }.coerceIn(minZoomRatio, maxZoomRatio)
-                                currentZoomRatio = next
-                                camera?.cameraControl?.setZoomRatio(next)
-                            }
-                            .padding(horizontal = 8.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = String.format(Locale.US, "🔍 %.1fx", currentZoomRatio),
-                            fontSize = 11.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    // Camera Auto Focus / Focus Lock Pill (Cricket Broadcast Focus)
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isFocusLocked) Color(0xFFB45309) else Color(0xCC071529))
-                            .border(
-                                BorderStroke(1.dp, if (isFocusLocked) Color(0xFFFFC107) else Color(0x3338BDF8)),
-                                RoundedCornerShape(8.dp)
-                            )
-                            .clickable {
-                                triggerHapticFeedback(context)
-                                if (isFocusLocked) {
-                                    camera?.cameraControl?.cancelFocusAndMetering()
-                                    isFocusLocked = false
-                                    focusRingOffset = null
-                                    focusStatusToast = "🎯 Continuous Auto Focus active"
-                                } else {
-                                    val pv = previewView
-                                    if (pv != null && camera != null) {
-                                        val factory = pv.meteringPointFactory
-                                        val centerX = pv.width / 2f
-                                        val centerY = pv.height / 2f
-                                        val point = factory.createPoint(centerX, centerY)
-                                        val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
-                                            .disableAutoCancel()
-                                            .build()
-                                        camera?.cameraControl?.startFocusAndMetering(action)
-                                        focusRingOffset = Offset(centerX, centerY)
-                                        focusRingColor = Color(0xFFFFC107)
-                                    }
-                                    isFocusLocked = true
-                                    focusStatusToast = "🔒 Focus Locked (No Hunting)"
-                                }
-                            }
-                            .padding(horizontal = 8.dp, vertical = 6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (isFocusLocked) "🔒" else "🎯", fontSize = 11.sp)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (isFocusLocked) "Locked" else "AF Auto",
-                                fontSize = 11.sp,
-                                color = if (isFocusLocked) Color(0xFFFFC107) else Color(0xFF6EE7B7),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    // Torch / Flashlight
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (isTorchOn) Color(0xFFFFC107) else Color(0xCC071529))
-                            .clickable {
-                                if (camera?.cameraInfo?.hasFlashUnit() == true) {
-                                    val newState = !isTorchOn
-                                    isTorchOn = newState
-                                    camera?.cameraControl?.enableTorch(newState)
-                                }
-                            }
-                            .padding(8.dp)
-                    ) {
-                        Text(if (isTorchOn) "⚡" else "💡", fontSize = 13.sp)
-                    }
-
-                    // Hide Toolbar for Clean Stream View
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color(0xCC071529))
-                            .clickable { showControls = false }
-                            .padding(8.dp)
-                    ) {
-                        Text("⛶", fontSize = 13.sp, color = Color.White)
-                    }
-                }
-            }
-        } else if (!isScreenLocked) {
-            // Restore Controls floating pill + Small Live Indicator if streaming
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                if (streamState.isStreaming) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xCCE50914))
-                            .padding(horizontal = 7.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "🔴 LIVE ${formatDuration(streamState.durationSeconds)}",
-                            fontSize = 10.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Box(
                     modifier = Modifier
-                        .clip(CircleShape)
-                        .background(Color(0xAA071529))
-                        .clickable { showControls = true }
-                        .padding(8.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xDD071529))
+                        .border(BorderStroke(1.dp, Color(0x3338BDF8)), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("⚙", fontSize = 13.sp, color = Color.White)
+                    // Left Status Block: LIVE/READY + Resolution + FPS
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (isLive) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFE50914))
+                                    .padding(horizontal = 7.dp, vertical = 3.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(Color.White))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("LIVE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                            }
+                        } else if (streamState.isReconnecting) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFB45309))
+                                    .padding(horizontal = 7.dp, vertical = 3.dp)
+                            ) {
+                                Text("RETRY", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFF059669))
+                                    .padding(horizontal = 7.dp, vertical = 3.dp)
+                            ) {
+                                Text("READY", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+
+                        // Camera resolution
+                        Text(
+                            text = selectedQuality,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF38BDF8)
+                        )
+
+                        // FPS indicator
+                        Text(
+                            text = "30 FPS",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFA6BAD4)
+                        )
+                    }
+
+                    // Right Status Block: Network Strength + Battery % + Bitrate
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Network strength
+                        Text(
+                            text = "$netIcon $netQuality",
+                            fontSize = 10.5.sp,
+                            color = Color(0xFFE2E8F0)
+                        )
+
+                        // Battery percentage
+                        Text(
+                            text = "🔋 $batteryLevel%",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (batteryLevel <= 20) Color(0xFFFF4E61) else Color(0xFF6EE7B7)
+                        )
+
+                        // Streaming bitrate
+                        Text(
+                            text = bitrateDisplay,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFC107)
+                        )
+                    }
                 }
             }
         }
 
-        // LAYER 4: FLOATING VERTICAL CAMERA ZOOM CONTROLLER (Right Side for quick thumb control)
+        // CAMERA CONTROLS (Right Side Dock: Zoom Slider + Presets 1x, 2x, 4x, 8x, Torch, Focus, Exposure, Fullscreen)
         if (showControls && !isScreenLocked) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 12.dp)
+                    .padding(end = 8.dp)
             ) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xDD071529)),
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0x33FFFFFF))
+                    border = BorderStroke(1.dp, Color(0x3338BDF8))
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp, vertical = 8.dp)
+                            .width(76.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        // Current Zoom Level Badge
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFF087CFF))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = String.format(Locale.US, "%.1fx", currentZoomRatio),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-
-                        // Zoom In (+)
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(Color(0x33FFFFFF))
-                                .clickable {
-                                    val next = (currentZoomRatio + 0.5f).coerceIn(minZoomRatio, maxZoomRatio)
-                                    currentZoomRatio = next
-                                    camera?.cameraControl?.setZoomRatio(next)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("+", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-
-                        // Zoom Presets: 4x, 2x, 1x
-                        val presets = listOf(4.0f, 2.0f, 1.0f)
-                        for (preset in presets) {
-                            if (preset <= maxZoomRatio) {
-                                val isSelected = abs(currentZoomRatio - preset) < 0.25f
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isSelected) Color(0xFFFFC107) else Color(0x22FFFFFF))
-                                        .clickable {
-                                            triggerHapticFeedback(context)
-                                            val target = preset.coerceIn(minZoomRatio, maxZoomRatio)
-                                            currentZoomRatio = target
-                                            camera?.cameraControl?.setZoomRatio(target)
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "${preset.toInt()}x",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) Color(0xFF071529) else Color.White
-                                    )
-                                }
-                            }
-                        }
-
-                        // Zoom Out (-)
+                        // Camera preview fullscreen option
                         Box(
                             modifier = Modifier
                                 .size(30.dp)
@@ -1832,56 +1615,369 @@ fun CameraStreamOverlayScreen(
                                 .background(Color(0x33FFFFFF))
                                 .clickable {
                                     triggerHapticFeedback(context)
-                                    val prev = (currentZoomRatio - 0.5f).coerceIn(minZoomRatio, maxZoomRatio)
-                                    currentZoomRatio = prev
-                                    camera?.cameraControl?.setZoomRatio(prev)
+                                    showControls = false
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("−", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("⛶", fontSize = 13.sp, color = Color.White)
                         }
 
-                        // Focus Mode Button in Thumb Controller (🎯 AF / 🔒 Lock)
+                        // Torch toggle
                         Box(
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(30.dp)
                                 .clip(CircleShape)
-                                .background(if (isFocusLocked) Color(0xFFFFC107) else Color(0x22FFFFFF))
+                                .background(if (isTorchOn) Color(0xFFFFC107) else Color(0x33FFFFFF))
+                            .clickable {
+                                if (camera?.cameraInfo?.hasFlashUnit() == true) {
+                                    triggerHapticFeedback(context)
+                                    val newState = !isTorchOn
+                                    isTorchOn = newState
+                                    camera?.cameraControl?.enableTorch(newState)
+                                }
+                            },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(if (isTorchOn) "⚡" else "💡", fontSize = 12.sp)
+                        }
+
+                        // Camera focus control (AF / Focus Lock)
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(if (isFocusLocked) Color(0xFFFFC107) else Color(0x33FFFFFF))
                                 .clickable {
                                     triggerHapticFeedback(context)
                                     if (isFocusLocked) {
                                         camera?.cameraControl?.cancelFocusAndMetering()
                                         isFocusLocked = false
                                         focusRingOffset = null
-                                        focusStatusToast = "🎯 Auto Focus active"
+                                        focusStatusToast = "🎯 Continuous Auto Focus active"
                                     } else {
                                         val pv = previewView
                                         if (pv != null && camera != null) {
                                             val factory = pv.meteringPointFactory
-                                            val centerX = pv.width / 2f
-                                            val centerY = pv.height / 2f
-                                            val point = factory.createPoint(centerX, centerY)
-                                            val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                                            val cx = pv.width / 2f
+                                            val cy = pv.height / 2f
+                                            val action = FocusMeteringAction.Builder(factory.createPoint(cx, cy), FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
                                                 .disableAutoCancel()
                                                 .build()
                                             camera?.cameraControl?.startFocusAndMetering(action)
-                                            focusRingOffset = Offset(centerX, centerY)
+                                            focusRingOffset = Offset(cx, cy)
                                             focusRingColor = Color(0xFFFFC107)
                                         }
                                         isFocusLocked = true
-                                        focusStatusToast = "🔒 Focus Locked (No Hunting)"
+                                        focusStatusToast = "🔒 Focus Locked at Center"
                                     }
                                 },
                             contentAlignment = Alignment.Center
                         ) {
+                            Text(if (isFocusLocked) "🔒" else "🎯", fontSize = 12.sp)
+                        }
+
+                        // Exposure adjustment (±EV)
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(if (currentExposureIndex != 0) Color(0xFF087CFF) else Color(0x33FFFFFF))
+                                .clickable {
+                                    triggerHapticFeedback(context)
+                                    showExposureDialog = !showExposureDialog
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("±EV", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+
+                        // Current Zoom Ratio Badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFF087CFF))
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                        ) {
                             Text(
-                                text = if (isFocusLocked) "🔒" else "🎯",
-                                fontSize = 11.sp,
-                                color = if (isFocusLocked) Color(0xFF071529) else Color.White
+                                text = String.format(Locale.US, "%.1fx", currentZoomRatio),
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+
+                        // Zoom Slider
+                        Slider(
+                            value = currentZoomRatio,
+                            onValueChange = { target ->
+                                currentZoomRatio = target
+                                camera?.cameraControl?.setZoomRatio(target)
+                            },
+                            valueRange = minZoomRatio..maxOf(maxZoomRatio, 8.0f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(26.dp),
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color(0xFFFFC107),
+                                activeTrackColor = Color(0xFF087CFF),
+                                inactiveTrackColor = Color(0x33FFFFFF)
+                            )
+                        )
+
+                        // Quick Zoom Presets: 8x, 4x, 2x, 1x
+                        val presets = listOf(8.0f, 4.0f, 2.0f, 1.0f)
+                        for (preset in presets) {
+                            val isSelected = abs(currentZoomRatio - preset) < 0.25f
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isSelected) Color(0xFFFFC107) else Color(0x22FFFFFF))
+                                    .clickable {
+                                        triggerHapticFeedback(context)
+                                        val target = preset.coerceIn(minZoomRatio, maxZoomRatio)
+                                        currentZoomRatio = target
+                                        camera?.cameraControl?.setZoomRatio(target)
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${preset.toInt()}x",
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) Color(0xFF071529) else Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // EXPOSURE ADJUSTMENT POPUP
+        if (showExposureDialog && showControls && !isScreenLocked) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xEE071529)),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color(0xFF38BDF8))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("☀️ Camera Exposure Adjustment", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val evVal = currentExposureIndex * 0.5f
+                    Text(String.format(Locale.US, "%+.1f EV", evVal), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFFC107))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                if (currentExposureIndex > -4) {
+                                    currentExposureIndex -= 1
+                                    camera?.cameraControl?.setExposureCompensationIndex(currentExposureIndex)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FFFFFF)),
+                            shape = CircleShape,
+                            modifier = Modifier.size(36.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                        ) { Text("−", fontSize = 18.sp, color = Color.White) }
+
+                        Button(
+                            onClick = {
+                                currentExposureIndex = 0
+                                camera?.cameraControl?.setExposureCompensationIndex(0)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FFFFFF)),
+                            shape = RoundedCornerShape(6.dp)
+                        ) { Text("Reset EV", fontSize = 11.sp, color = Color.White) }
+
+                        Button(
+                            onClick = {
+                                if (currentExposureIndex < 4) {
+                                    currentExposureIndex += 1
+                                    camera?.cameraControl?.setExposureCompensationIndex(currentExposureIndex)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FFFFFF)),
+                            shape = CircleShape,
+                            modifier = Modifier.size(36.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                        ) { Text("+", fontSize = 18.sp, color = Color.White) }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = { showExposureDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087CFF)),
+                        shape = RoundedCornerShape(6.dp)
+                    ) { Text("Done", fontSize = 11.sp, color = Color.White) }
+                }
+            }
+        }
+
+        // BOTTOM BROADCASTING CONTROLS (Overlay ON/OFF, Break Screen, Circular Stream, Stop/Pause, Lock Screen)
+        if (showControls && !isScreenLocked) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xDD071529))
+                        .border(BorderStroke(1.dp, Color(0x3338BDF8)), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    // OVERLAY ON/OFF button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isOverlayVisible) Color(0xFF0284C7) else Color(0x44FFFFFF))
+                            .clickable {
+                                triggerHapticFeedback(context)
+                                isOverlayVisible = !isOverlayVisible
+                            }
+                            .padding(horizontal = 9.dp, vertical = 7.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (isOverlayVisible) "👁" else "🚫", fontSize = 11.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isOverlayVisible) "Overlay ON" else "Overlay OFF",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // BREAK SCREEN button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isBreakScreenActive) Color(0xFFD97706) else Color(0x33FFFFFF))
+                            .clickable {
+                                triggerHapticFeedback(context)
+                                isBreakScreenActive = !isBreakScreenActive
+                            }
+                            .padding(horizontal = 9.dp, vertical = 7.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("⏸", fontSize = 11.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isBreakScreenActive) "Resume Live" else "Break Screen",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // LARGE CIRCULAR RED STREAM BUTTON
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE50914))
+                            .border(BorderStroke(2.5.dp, if (streamState.isStreaming) Color(0xFFFFC107) else Color.White), CircleShape)
+                            .clickable {
+                                triggerHapticFeedback(context)
+                                if (streamState.isStreaming) {
+                                    showStopConfirmDialog = true
+                                } else {
+                                    streamKeyValidationError = null
+                                    showStreamSetupDialog = true
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(if (streamState.isStreaming) "⏹" else "🔴", fontSize = 14.sp)
+                            Text(
+                                text = if (streamState.isStreaming) "LIVE" else "STREAM",
+                                fontSize = 8.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // PAUSE / STOP button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (streamState.isStreaming) Color(0xFFDC2626) else Color(0x33FFFFFF))
+                            .clickable {
+                                triggerHapticFeedback(context)
+                                if (streamState.isStreaming) {
+                                    showStopConfirmDialog = true
+                                } else {
+                                    Toast.makeText(context, "Stream is not currently active", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            .padding(horizontal = 9.dp, vertical = 7.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("⏹", fontSize = 11.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Stop / Pause",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // LOCK SCREEN button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0x33FFFFFF))
+                            .clickable {
+                                triggerHapticFeedback(context)
+                                isScreenLocked = true
+                            }
+                            .padding(horizontal = 9.dp, vertical = 7.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🔒", fontSize = 11.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Lock Screen",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
                         }
                     }
                 }
+            }
+        } else if (!isScreenLocked) {
+            // Fullscreen preview mode: Floating restore gear button
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(10.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xAA071529))
+                    .clickable { showControls = true }
+                    .padding(8.dp)
+            ) {
+                Text("⚙", fontSize = 14.sp, color = Color.White)
             }
         }
 

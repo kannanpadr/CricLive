@@ -1435,6 +1435,294 @@
         grid-template-columns: repeat(3, 1fr);
       }
     }
+
+    /* =========================================================
+       SCREEN 6, 8, 9 DEDICATED CONTROL SCREENS & UI
+       ========================================================= */
+    .screen-card {
+      position: relative;
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+      margin-bottom: 14px;
+    }
+    .stream-screen-tag {
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.45);
+      color: #38bdf8;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    .stream-small-live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #dc2626;
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    /* SCREEN 6: LIVE STREAMING DASHBOARD */
+    .stream-health-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      transition: all 0.3s ease;
+    }
+    .health-green {
+      background: linear-gradient(135deg, rgba(5, 150, 105, 0.25), rgba(16, 185, 129, 0.12));
+      border: 1px solid rgba(16, 185, 129, 0.55);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.18);
+    }
+    .health-amber {
+      background: linear-gradient(135deg, rgba(217, 119, 6, 0.25), rgba(245, 158, 11, 0.12));
+      border: 1px solid rgba(245, 158, 11, 0.55);
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.18);
+    }
+    .health-red {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.25), rgba(239, 68, 68, 0.12));
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.18);
+    }
+    .health-icon { font-size: 24px; line-height: 1; }
+    .health-meta { flex: 1; }
+    .health-meta strong { display: block; font-size: 13.5px; color: #fff; margin-bottom: 2px; }
+    .health-meta p { margin: 0; font-size: 11.5px; color: #cbd5e1; }
+    .health-pill {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(0,0,0,0.45);
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    .stream-metrics-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .stream-metric-item {
+      flex: 1;
+      background: rgba(10, 22, 40, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .metric-label { display: block; font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; font-weight: 700; }
+    .metric-val { font-size: 15px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px; }
+    .metric-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+
+    .stream-actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #0f1f38;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #fff;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+    }
+    .action-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .action-btn.danger { background: rgba(220, 38, 38, 0.22); border-color: rgba(220, 38, 38, 0.55); }
+    .action-btn.danger:hover { background: rgba(220, 38, 38, 0.45); }
+    .action-btn.warning { background: rgba(217, 119, 6, 0.22); border-color: rgba(217, 119, 6, 0.55); }
+    .action-btn.warning:hover { background: rgba(217, 119, 6, 0.45); }
+    .action-btn.info { background: rgba(2, 132, 199, 0.22); border-color: rgba(2, 132, 199, 0.55); }
+    .action-btn.info:hover { background: rgba(2, 132, 199, 0.45); }
+    .action-btn.secondary { background: rgba(100, 116, 139, 0.22); border-color: rgba(148, 163, 184, 0.4); }
+    .action-btn.secondary:hover { background: rgba(100, 116, 139, 0.45); }
+    .action-btn.primary { background: rgba(8, 124, 255, 0.22); border-color: rgba(8, 124, 255, 0.55); }
+    .action-btn.primary:hover { background: rgba(8, 124, 255, 0.45); }
+    .btn-icon { font-size: 18px; line-height: 1; }
+    .btn-text b { display: block; font-size: 12px; }
+    .btn-text small { font-size: 10px; color: #94a3b8; }
+
+    /* SCREEN 8: CUSTOMIZATION PREVIEW & CONTROLS */
+    .cust-preview-top-container {
+      background: #040d1a;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .cust-preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .preview-title { font-size: 12px; font-weight: 800; color: #38bdf8; text-transform: uppercase; }
+    .preview-mode-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .preview-chip { font-size: 9.5px; background: rgba(255,255,255,0.08); padding: 2px 7px; border-radius: 4px; color: #cbd5e1; }
+    .cust-preview-canvas {
+      background: radial-gradient(circle at center, #0c203b 0%, #030a14 100%);
+      border-radius: 8px;
+      padding: 18px 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 110px;
+      overflow: hidden;
+    }
+    .mini-broadcast-wrapper { width: 100%; max-width: 620px; transition: all 0.25s ease; }
+    .mini-score-card {
+      background: rgba(7, 13, 25, 0.88);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 6px 12px;
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      transition: all 0.25s ease;
+    }
+    .mini-top-ribbon { font-size: 9px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
+    .mini-sponsor-tag { color: #fde047; font-weight: 700; margin-left: auto; }
+    .mini-score-strip { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .mini-team-left, .mini-team-right { display: flex; align-items: center; gap: 6px; }
+    .mini-accent-bar { width: 4px; height: 18px; border-radius: 2px; }
+    .mini-team-name { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; }
+    .mini-score-hub { text-align: center; }
+    .mini-score { font-size: 18px; font-weight: 900; color: #fff; }
+    .mini-overs { font-size: 10px; color: #38bdf8; margin-left: 4px; }
+    .mini-stats-bar { font-size: 9.5px; color: #cbd5e1; display: flex; justify-content: space-between; margin-top: 4px; }
+
+    .cust-section-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 12px 0 8px;
+    }
+    .theme-preset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .theme-preset-card {
+      background: #09172c;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .theme-preset-card:hover { border-color: #38bdf8; background: #0e2444; }
+    .theme-preset-card.active { border-color: #087cff; background: #0c264a; box-shadow: 0 0 12px rgba(8, 124, 255, 0.4); }
+    .preset-swatches { display: flex; gap: 4px; margin-bottom: 6px; }
+    .preset-swatches span { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); }
+    .preset-name { font-size: 11.5px; font-weight: 800; color: #fff; margin-bottom: 2px; }
+    .preset-desc { font-size: 10px; color: #94a3b8; }
+
+    .cust-controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .cust-control-item.full-width { grid-column: 1 / -1; }
+    .cust-control-item label { display: block; font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; }
+    .btn-toggle-group { display: flex; gap: 4px; }
+    .toggle-choice-btn {
+      flex: 1;
+      background: #091a33;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #cbd5e1;
+      padding: 7px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .toggle-choice-btn:hover { background: #132a4e; color: #fff; }
+    .toggle-choice-btn.active { background: #087cff; border-color: #38bdf8; color: #fff; }
+    .apply-broadcast-btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      border-radius: 8px;
+      box-shadow: 0 4px 14px rgba(8, 124, 255, 0.4);
+      cursor: pointer;
+    }
+
+    /* SCREEN 9: SPONSOR MANAGEMENT */
+    .sponsor-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .sponsors-list-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .sponsor-item-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #09172c;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.15s;
+    }
+    .sponsor-item-card:hover { border-color: rgba(56, 189, 248, 0.4); }
+    .sp-logo-box {
+      width: 44px;
+      height: 32px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      font-size: 18px;
+    }
+    .sp-logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .sp-meta { flex: 1; }
+    .sp-category { display: inline-block; font-size: 9px; font-weight: 800; color: #fde047; text-transform: uppercase; letter-spacing: 0.5px; }
+    .sp-name { display: block; font-size: 12.5px; font-weight: 700; color: #fff; }
+    .sp-actions { display: flex; gap: 6px; }
+
+    .sponsor-edit-form {
+      background: #061426;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .edit-form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .logo-upload-box { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+    .logo-preview-thumb { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; }
+    .logo-preview-thumb img { height: 28px; max-width: 60px; object-fit: contain; }
+    .remove-logo-btn { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 10px; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
   </style>
 </head>
 
@@ -1461,10 +1749,11 @@
       <!-- SIDEBAR / TOP MOBILE TAB BAR -->
       <aside>
         <button class="nav active" data-page="dashboard"><span class="ico">⌂</span> <span>Dashboard</span></button>
+        <button class="nav" data-page="stream"><span class="ico">🔴</span> <span>Live Stream</span></button>
+        <button class="nav" data-page="customization"><span class="ico">🎨</span> <span>Overlay Design</span></button>
+        <button class="nav" data-page="sponsors"><span class="ico">🤝</span> <span>Sponsors</span></button>
         <button class="nav" data-page="scorecard"><span class="ico">🔗</span> <span>Scorecard Link</span></button>
         <button class="nav" data-page="match"><span class="ico">↗</span> <span>Match Setup</span></button>
-        <button class="nav" data-page="design"><span class="ico">◉</span> <span>Overlay Design</span></button>
-        <button class="nav" data-page="display"><span class="ico">▣</span> <span>Display Options</span></button>
         <button class="nav" data-page="obs"><span class="ico">▱</span> <span>OBS Integration</span></button>
         <button class="nav" data-page="data"><span class="ico">▤</span> <span>Diagnostics</span></button>
         <div class="aside-bottom">
@@ -1728,6 +2017,84 @@
               </div>
             </section>
 
+            <!-- SCREEN 6: LIVE STREAMING DASHBOARD -->
+            <section class="card screen-card" id="streamingDashboardCard">
+              <div class="card-head">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <h3>🔴 Live Streaming Dashboard</h3>
+                  <!-- Small LIVE indicator -->
+                  <span class="stream-small-live-pill" id="screen6LiveBadge"><span class="pulse-dot"></span> LIVE</span>
+                </div>
+                <span class="stream-screen-tag">SCREEN 6</span>
+              </div>
+
+              <div class="card-body">
+                <!-- STREAMING HEALTH STATUS (Green / Amber / Red states) -->
+                <div class="stream-health-banner health-green" id="streamHealthBanner">
+                  <div class="health-icon" id="healthIcon">🟢</div>
+                  <div class="health-meta">
+                    <strong id="healthTitle">STREAM STATUS: HEALTHY & LIVE</strong>
+                    <p id="healthDesc">All broadcast streams and score data pipelines are operating with high stability.</p>
+                  </div>
+                  <div class="health-badges">
+                    <span class="health-pill" id="healthPill">HEALTH: EXCELLENT</span>
+                  </div>
+                </div>
+
+                <!-- STREAM METRICS BAR (Small Live indicator & Battery percentage ONLY) -->
+                <div class="stream-metrics-bar">
+                  <div class="stream-metric-item">
+                    <span class="metric-label">Broadcast State</span>
+                    <div class="metric-val">
+                      <span class="metric-live-dot" id="metricLiveDot"></span>
+                      <span id="metricLiveStatusText">LIVE ON AIR</span>
+                    </div>
+                  </div>
+                  <div class="stream-metric-item">
+                    <span class="metric-label">Device Battery</span>
+                    <div class="metric-val" id="metricBatteryVal">
+                      🔋 <span id="dashBatteryPercent">88%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BROADCASTING ACTION CONTROLS -->
+                <div class="stream-actions-group">
+                  <h4 style="margin: 10px 0 8px; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Broadcasting Actions</h4>
+                  <div class="stream-actions-grid">
+                    <button type="button" class="action-btn danger" id="btnActionStopStream" onclick="handleStreamAction('stop')">
+                      <span class="btn-icon">⏹</span>
+                      <span class="btn-text"><b>Stop Stream</b><small>Disconnect broadcast</small></span>
+                    </button>
+                    <button type="button" class="action-btn warning" id="btnActionPauseResume" onclick="handleStreamAction('pause')">
+                      <span class="btn-icon" id="pauseBtnIcon">⏸</span>
+                      <span class="btn-text"><b id="pauseBtnText">Pause / Resume</b><small>Toggle stream feed</small></span>
+                    </button>
+                    <button type="button" class="action-btn info" id="btnActionBreakScreen" onclick="handleStreamAction('break')">
+                      <span class="btn-icon">☕</span>
+                      <span class="btn-text"><b id="breakBtnText">Switch to Break Screen</b><small>Innings / Tech pause</small></span>
+                    </button>
+                    <button type="button" class="action-btn secondary" id="btnActionLockTouch" onclick="handleStreamAction('lock')">
+                      <span class="btn-icon">🔒</span>
+                      <span class="btn-text"><b>Lock Touch Controls</b><small>Tripod Touch Guard</small></span>
+                    </button>
+                    <button type="button" class="action-btn primary" id="btnActionPreviewOverlay" onclick="handleStreamAction('preview')">
+                      <span class="btn-icon">👁</span>
+                      <span class="btn-text"><b>Preview Overlay</b><small>Inspect broadcast bug</small></span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- QUICK HEALTH TEST BUTTONS -->
+                <div style="margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+                  <span style="font-size:10px; color:#94a3b8; font-weight:700">Health State:</span>
+                  <button type="button" style="padding:3px 8px; font-size:10px; background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#6ee7b7" onclick="setStreamHealth('green')">🟢 Green</button>
+                  <button type="button" style="padding:3px 8px; font-size:10px; background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#fde047" onclick="setStreamHealth('amber')">🟡 Amber</button>
+                  <button type="button" style="padding:3px 8px; font-size:10px; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#fca5a5" onclick="setStreamHealth('red')">🔴 Red</button>
+                </div>
+              </div>
+            </section>
+
             <!-- OVERLAY PREVIEW CARD -->
             <section class="card" id="previewCard">
               <div class="card-head">
@@ -1809,62 +2176,242 @@
               </div>
             </section>
 
-            <!-- OVERLAY DESIGN CARD -->
-            <section class="card" id="designCard">
+            <!-- SCREEN 8: BROADCAST OVERLAY CUSTOMIZATION (Changed from overlay to control screen) -->
+            <section class="card screen-card" id="overlayCustomizationCard">
               <div class="card-head">
-                <h3>◉ Overlay Design & Colors</h3>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <h3>🎨 Broadcast Overlay Customization</h3>
+                  <span class="pill good">● Live Sync</span>
+                </div>
+                <span class="stream-screen-tag">SCREEN 8</span>
               </div>
+
               <div class="card-body">
-                <div class="design-grid">
-                  <div>
-                    <div class="field">
-                      <label>Color Theme</label>
-                      <select id="theme">
-                        <option value="bluegold" selected>Professional (Blue / Gold)</option>
-                        <option value="blue">Electric Cyan Blue</option>
-                        <option value="minimal">Minimal Dark Slate</option>
-                      </select>
-                    </div>
-                    <div class="field">
-                      <label>Overlay Size</label>
-                      <select id="layoutChoice">
-                        <option value="mini" selected>Slim Broadcast Bar (Batters & Bowler)</option>
-                        <option value="compact">Compact Scorebar</option>
-                        <option value="normal">Full Broadcast Card</option>
-                      </select>
-                    </div>
-                    <div class="toggle-row">
-                      <span>Team Logos & Icons</span>
-                      <input class="switch" id="showLogos" type="checkbox" checked>
-                    </div>
-                    <div class="toggle-row">
-                      <span>Show Target & Chase</span>
-                      <input class="switch" id="showTarget" type="checkbox" checked>
+                <!-- LIVE OVERLAY PREVIEW AT THE TOP (Required by SRS/User) -->
+                <div class="cust-preview-top-container">
+                  <div class="cust-preview-header">
+                    <span class="preview-title">📺 Live Overlay Preview</span>
+                    <div class="preview-mode-badges">
+                      <span class="preview-chip" id="chipPreviewTheme">Theme: Professional</span>
+                      <span class="preview-chip" id="chipPreviewScale">Scale: 78%</span>
+                      <span class="preview-chip" id="chipPreviewPos">Pos: Bottom</span>
+                      <span class="preview-chip" id="chipPreviewLayout">Layout: Slim Bar</span>
                     </div>
                   </div>
-                  <div>
-                    <div class="field">
-                      <label>Primary Batting Accent</label>
-                      <div class="swatch">
-                        <input id="primaryColor" type="color" value="#087cff">
-                        <input id="primaryHex" value="#087CFF">
-                      </div>
-                    </div>
-                    <div class="field">
-                      <label>Secondary Bowling Accent</label>
-                      <div class="swatch">
-                        <input id="secondaryColor" type="color" value="#ffc107">
-                        <input id="secondaryHex" value="#FFC107">
-                      </div>
-                    </div>
-                    <div class="field">
-                      <label>Background Opacity (<span id="opacityText">88%</span>)</label>
-                      <div class="range-row">
-                        <input id="opacity" type="range" min="40" max="100" value="88">
-                        <span id="opacityValue">88%</span>
+                  <div class="cust-preview-canvas" id="custPreviewCanvas">
+                    <div class="mini-broadcast-wrapper" id="custMiniBroadcast">
+                      <div class="mini-score-card" id="miniScoreCard">
+                        <div class="mini-top-ribbon" id="miniTopRibbon">
+                          <span id="miniTournament">RBCL UNDER-14</span> • <span id="miniVenue">Bengaluru, Karnataka</span> • <span class="mini-sponsor-tag" id="miniSponsorTag">🤝 ABC Motors</span>
+                        </div>
+                        <div class="mini-score-strip" id="miniScoreStrip">
+                          <div class="mini-team-left" id="miniTeamLeft">
+                            <span class="mini-accent-bar" id="miniAccentLeft" style="background:#087CFF"></span>
+                            <span class="mini-team-name" id="miniBattingTeam">BENGALURU STRIKES</span>
+                          </div>
+                          <div class="mini-score-hub">
+                            <b class="mini-score" id="miniScore">128/3</b>
+                            <span class="mini-overs" id="miniOvers">(15.2 OV)</span>
+                          </div>
+                          <div class="mini-team-right" id="miniTeamRight">
+                            <span class="mini-team-name" id="miniBowlingTeam">BALLARI FALCONS</span>
+                            <span class="mini-accent-bar" id="miniAccentRight" style="background:#FFC107"></span>
+                          </div>
+                        </div>
+                        <div class="mini-stats-bar" id="miniStatsBar">
+                          <span id="miniBatters">▶ Kohli 45*(28) · Rohit 32(18)</span>
+                          <span id="miniBowler">Bowler: Bumrah 2.2-0-14-1</span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                </div>
+
+                <!-- THEME PRESETS -->
+                <div class="cust-section-title">Theme Presets</div>
+                <div class="theme-preset-grid">
+                  <div class="theme-preset-card active" id="presetProf" onclick="selectThemePreset('bluegold')">
+                    <div class="preset-swatches">
+                      <span style="background:#087CFF"></span>
+                      <span style="background:#FFC107"></span>
+                      <span style="background:#071326"></span>
+                    </div>
+                    <div class="preset-name">Professional Blue & Gold</div>
+                    <div class="preset-desc">Star Sports / Hotstar broadcast elegance</div>
+                  </div>
+                  <div class="theme-preset-card" id="presetElectric" onclick="selectThemePreset('blue')">
+                    <div class="preset-swatches">
+                      <span style="background:#00E5FF"></span>
+                      <span style="background:#087CFF"></span>
+                      <span style="background:#041527"></span>
+                    </div>
+                    <div class="preset-name">Electric Blue</div>
+                    <div class="preset-desc">Vibrant cyan glow for high-energy T20s</div>
+                  </div>
+                  <div class="theme-preset-card" id="presetDark" onclick="selectThemePreset('minimal')">
+                    <div class="preset-swatches">
+                      <span style="background:#E2E8F0"></span>
+                      <span style="background:#94A3B8"></span>
+                      <span style="background:#0F172A"></span>
+                    </div>
+                    <div class="preset-name">Minimal Dark</div>
+                    <div class="preset-desc">Clean monochromatic TV scorecard</div>
+                  </div>
+                </div>
+
+                <!-- CUSTOMIZATION CONTROLS -->
+                <div class="cust-controls-grid">
+                  <!-- Row 1: Colors & Opacity -->
+                  <div class="cust-control-item">
+                    <label>Primary Team Color (Batting Accent)</label>
+                    <div class="swatch">
+                      <input type="color" id="primaryCustColor" value="#087CFF" oninput="updateCustColor('primary', this.value)">
+                      <input type="text" id="primaryCustHex" value="#087CFF" onchange="updateCustHex('primary', this.value)">
+                    </div>
+                  </div>
+                  <div class="cust-control-item">
+                    <label>Secondary Team Color (Bowling Accent)</label>
+                    <div class="swatch">
+                      <input type="color" id="secondaryCustColor" value="#FFC107" oninput="updateCustColor('secondary', this.value)">
+                      <input type="text" id="secondaryCustHex" value="#FFC107" onchange="updateCustHex('secondary', this.value)">
+                    </div>
+                  </div>
+                  <div class="cust-control-item">
+                    <label>Background Opacity (<span id="custOpacityVal">88%</span>)</label>
+                    <div class="range-row">
+                      <input type="range" id="custOpacitySlider" min="40" max="100" value="88" oninput="updateCustOpacity(this.value)">
+                    </div>
+                  </div>
+
+                  <!-- Row 2: Scale, Position, Layout -->
+                  <div class="cust-control-item">
+                    <label>Overlay Scale</label>
+                    <div class="btn-toggle-group">
+                      <button type="button" class="toggle-choice-btn active" id="btnScale78" onclick="setCustScale('78%')">78%</button>
+                      <button type="button" class="toggle-choice-btn" id="btnScale90" onclick="setCustScale('90%')">90%</button>
+                    </div>
+                  </div>
+                  <div class="cust-control-item">
+                    <label>Position</label>
+                    <div class="btn-toggle-group">
+                      <button type="button" class="toggle-choice-btn" id="btnPosTop" onclick="setCustPosition('TOP')">TOP</button>
+                      <button type="button" class="toggle-choice-btn active" id="btnPosBottom" onclick="setCustPosition('BOTTOM')">BOTTOM</button>
+                    </div>
+                  </div>
+                  <div class="cust-control-item">
+                    <label>Layout</label>
+                    <div class="btn-toggle-group">
+                      <button type="button" class="toggle-choice-btn active" id="btnLayoutSlim" onclick="setCustLayout('SLIM BAR')">SLIM BAR</button>
+                      <button type="button" class="toggle-choice-btn" id="btnLayoutFull" onclick="setCustLayout('FULL')">FULL</button>
+                    </div>
+                  </div>
+
+                  <!-- Row 3: Tournament, Venue, Sponsor names -->
+                  <div class="cust-control-item full-width">
+                    <label>Tournament Title</label>
+                    <input type="text" id="custTournamentTitle" value="RBCL UNDER-14" placeholder="e.g. TATA IPL 2026, RBCL TROPHY" oninput="updateCustText()">
+                  </div>
+                  <div class="cust-control-item full-width">
+                    <label>Venue</label>
+                    <input type="text" id="custVenue" value="Bengaluru, Karnataka · RBCL Ground" placeholder="e.g. M. Chinnaswamy Stadium, Bengaluru" oninput="updateCustText()">
+                  </div>
+                  <div class="cust-control-item full-width">
+                    <label>Sponsor Names</label>
+                    <input type="text" id="custSponsorNames" value="ABC Motors, XYZ Sports, Dream11" placeholder="e.g. ABC Motors, XYZ Sports" oninput="updateCustText()">
+                  </div>
+                </div>
+
+                <!-- APPLY TO LIVE BROADCAST BUTTON -->
+                <div style="margin-top: 16px;">
+                  <button type="button" class="primary apply-broadcast-btn" id="btnApplyBroadcast" onclick="applyCustomizationToLiveBroadcast()">
+                    ⚡ APPLY TO LIVE BROADCAST
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <!-- SCREEN 9: SPONSOR MANAGEMENT (Design Sponsor Management Interface) -->
+            <section class="card screen-card" id="sponsorManagementCard">
+              <div class="card-head">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <h3>🤝 Sponsor Management</h3>
+                  <span class="pill" id="sponsorCountBadge">3 Active</span>
+                </div>
+                <span class="stream-screen-tag">SCREEN 9</span>
+              </div>
+
+              <div class="card-body">
+                <!-- TOP TOOLBAR: ROTATION INTERVAL & ADD BUTTON -->
+                <div class="sponsor-toolbar">
+                  <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:230px">
+                    <label for="spRotationInterval" style="margin-bottom:0;font-size:11px;font-weight:700;color:#cbd5e1;white-space:nowrap">Rotation Interval:</label>
+                    <select id="spRotationInterval" onchange="updateSponsorInterval(this.value)" style="width:auto;padding:5px 8px;min-height:30px;font-size:11px">
+                      <option value="5">5s (Fast)</option>
+                      <option value="8" selected>8s (Recommended)</option>
+                      <option value="10">10s</option>
+                      <option value="12">12s</option>
+                      <option value="15">15s</option>
+                      <option value="20">20s</option>
+                    </select>
+                  </div>
+                  <button type="button" class="primary" style="padding:6px 12px;font-size:11.5px" onclick="openAddSponsorModal()">➕ Add Sponsor</button>
+                </div>
+
+                <!-- SPONSORS LIST CONTAINER -->
+                <div class="sponsors-list-container" id="sponsorsListContainer">
+                  <!-- Rendered dynamically -->
+                </div>
+
+                <!-- ADD / EDIT SPONSOR INLINE FORM -->
+                <div class="sponsor-edit-form" id="sponsorEditForm" style="display:none;">
+                  <div class="edit-form-header">
+                    <h4 id="sponsorFormTitle" style="margin:0;font-size:13px;color:#38bdf8">Add Commercial Sponsor</h4>
+                    <button type="button" class="tool-btn" onclick="closeSponsorForm()">✕ Close</button>
+                  </div>
+                  <input type="hidden" id="spEditIndex" value="-1">
+                  <div class="form-row-2">
+                    <div>
+                      <label for="spCategoryInput" style="font-size:11px">Sponsor Category</label>
+                      <select id="spCategoryInput">
+                        <option value="Title Sponsor">Title Sponsor</option>
+                        <option value="Powered By">Powered By</option>
+                        <option value="Associate Sponsor">Associate Sponsor</option>
+                        <option value="Official Partner" selected>Official Partner</option>
+                        <option value="Beverage Partner">Beverage Partner</option>
+                        <option value="Kit Sponsor">Kit Sponsor</option>
+                        <option value="Strategic Timeout">Strategic Timeout</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="spDisplayText" style="font-size:11px">Sponsor Display Text</label>
+                      <input type="text" id="spDisplayText" placeholder="e.g. ABC Motors, Tata Motors">
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <label style="font-size:11px">Sponsor Logo Upload (Image File)</label>
+                    <div class="logo-upload-box">
+                      <input type="file" id="spLogoFileInput" accept="image/*" onchange="handleSponsorLogoUpload(event)" style="display:none">
+                      <button type="button" class="tool-btn" onclick="document.getElementById('spLogoFileInput').click()">📁 Choose Image</button>
+                      <div class="logo-preview-thumb" id="logoPreviewThumb" style="display:none">
+                        <img id="spLogoPreviewImg" src="" alt="Logo">
+                        <button type="button" class="remove-logo-btn" onclick="removeSponsorLogo()">✕ Remove</button>
+                      </div>
+                      <span class="muted" style="font-size:10.5px" id="logoUploadHint">Supports PNG/JPG/SVG logos with transparency.</span>
+                    </div>
+                  </div>
+
+                  <div class="btnrow" style="margin-top:10px">
+                    <button type="button" class="primary" onclick="saveSponsorFromForm()">💾 Save Sponsor</button>
+                    <button type="button" onclick="closeSponsorForm()">Cancel</button>
+                  </div>
+                </div>
+
+                <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                  <button type="button" class="primary" style="background:#059669;border-color:#10b981;padding:8px 14px" onclick="syncSponsorsToOverlay()">
+                    ✓ Save & Sync Sponsors
+                  </button>
+                  <span class="muted" style="font-size:11px">Rotates on overlay according to chosen interval.</span>
                 </div>
               </div>
             </section>
@@ -2771,6 +3318,508 @@
       $("rawCard").scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
+    // =========================================================
+    // SCREEN 6: LIVE STREAMING DASHBOARD (Clean Monitoring & Control)
+    // =========================================================
+    let currentStreamHealth = 'green';
+    let isStreamPaused = false;
+    let isBreakActive = false;
+    let isTouchLocked = false;
+
+    function setStreamHealth(state) {
+      currentStreamHealth = state;
+      const banner = $("streamHealthBanner");
+      const icon = $("healthIcon");
+      const title = $("healthTitle");
+      const desc = $("healthDesc");
+      const pill = $("healthPill");
+      const liveBadge = $("screen6LiveBadge");
+      const dot = $("metricLiveDot");
+      const statusText = $("metricLiveStatusText");
+
+      if (!banner) return;
+      banner.className = "stream-health-banner";
+
+      if (state === "green") {
+        banner.classList.add("health-green");
+        if (icon) icon.textContent = "🟢";
+        if (title) title.textContent = "STREAM STATUS: HEALTHY & LIVE";
+        if (desc) desc.textContent = "Video pipeline, score graphics overlay, and cloud ingest are operating with high stability.";
+        if (pill) pill.textContent = "HEALTH: EXCELLENT";
+        if (liveBadge) liveBadge.style.display = "inline-flex";
+        if (dot) dot.style.background = "#10b981";
+        if (statusText) statusText.textContent = isStreamPaused ? "PAUSED" : "LIVE ON AIR";
+      } else if (state === "amber") {
+        banner.classList.add("health-amber");
+        if (icon) icon.textContent = "🟡";
+        if (title) title.textContent = "STREAM STATUS: CAUTION / RECONNECTING";
+        if (desc) desc.textContent = "Network jitter or cellular cell tower handoff detected. Auto-reconnection guard active.";
+        if (pill) pill.textContent = "HEALTH: RETRYING";
+        if (liveBadge) liveBadge.style.display = "inline-flex";
+        if (dot) dot.style.background = "#f59e0b";
+        if (statusText) statusText.textContent = "RECONNECTING...";
+      } else {
+        banner.classList.add("health-red");
+        if (icon) icon.textContent = "🔴";
+        if (title) title.textContent = "STREAM STATUS: OFFLINE / STANDBY";
+        if (desc) desc.textContent = "Live video broadcast is stopped or in standby. Ready to stream.";
+        if (pill) pill.textContent = "HEALTH: OFFLINE";
+        if (liveBadge) liveBadge.style.display = "none";
+        if (dot) dot.style.background = "#ef4444";
+        if (statusText) statusText.textContent = "STANDBY";
+      }
+    }
+
+    function handleStreamAction(action) {
+      if (action === "stop") {
+        if (confirm("Are you sure you want to STOP the live stream? Viewers will see the broadcast end.")) {
+          setStreamHealth("red");
+          if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.stopStreamFromWeb === 'function') {
+            window.AndroidScoreBridge.stopStreamFromWeb();
+          }
+          toast("Live stream broadcast stopped.", "warning");
+        }
+      } else if (action === "pause") {
+        isStreamPaused = !isStreamPaused;
+        const btnText = $("pauseBtnText");
+        const btnIcon = $("pauseBtnIcon");
+        if (isStreamPaused) {
+          if (btnText) btnText.textContent = "Resume Stream";
+          if (btnIcon) btnIcon.textContent = "▶";
+          setStreamHealth("amber");
+          toast("Stream paused (video/audio muted).");
+        } else {
+          if (btnText) btnText.textContent = "Pause Stream";
+          if (btnIcon) btnIcon.textContent = "⏸";
+          setStreamHealth("green");
+          toast("Stream resumed live on air!");
+        }
+        if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.togglePauseFromWeb === 'function') {
+          window.AndroidScoreBridge.togglePauseFromWeb(isStreamPaused);
+        }
+      } else if (action === "break") {
+        isBreakActive = !isBreakActive;
+        const btn = $("breakBtnText");
+        if (btn) btn.textContent = isBreakActive ? "▶ Resume Live Feed" : "Switch to Break Screen";
+        if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.toggleBreakFromWeb === 'function') {
+          window.AndroidScoreBridge.toggleBreakFromWeb(isBreakActive);
+        }
+        toast(isBreakActive ? "Intermission Break Screen activated!" : "Live camera feed resumed!");
+      } else if (action === "lock") {
+        isTouchLocked = true;
+        if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.lockTouchFromWeb === 'function') {
+          window.AndroidScoreBridge.lockTouchFromWeb();
+        }
+        toast("Touch controls locked (Tripod Guard active).");
+      } else if (action === "preview") {
+        const previewEl = $("custPreviewCanvas") || $("previewMount");
+        if (previewEl) {
+          previewEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          toast("Previewing live broadcast overlay.");
+        } else {
+          openOverlay();
+        }
+      }
+    }
+
+    // Battery monitoring (Device API or Android Bridge)
+    function updateBatteryDisplay() {
+      if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.getBatteryLevel === 'function') {
+        try {
+          const lvl = window.AndroidScoreBridge.getBatteryLevel();
+          if (lvl >= 0 && $("dashBatteryPercent")) $("dashBatteryPercent").textContent = lvl + "%";
+          return;
+        } catch (_) {}
+      }
+      if (navigator.getBattery) {
+        navigator.getBattery().then(b => {
+          if ($("dashBatteryPercent")) $("dashBatteryPercent").textContent = Math.round(b.level * 100) + "%";
+        }).catch(() => {});
+      }
+    }
+    updateBatteryDisplay();
+    setInterval(updateBatteryDisplay, 15000);
+
+    // =========================================================
+    // SCREEN 8: BROADCAST OVERLAY CUSTOMIZATION
+    // =========================================================
+    let currentCustTheme = "bluegold";
+    let currentCustScale = "78%";
+    let currentCustPosition = "BOTTOM";
+    let currentCustLayout = "SLIM BAR";
+
+    function selectThemePreset(themeKey) {
+      currentCustTheme = themeKey;
+      $("presetProf")?.classList.toggle("active", themeKey === "bluegold");
+      $("presetElectric")?.classList.toggle("active", themeKey === "blue");
+      $("presetDark")?.classList.toggle("active", themeKey === "minimal");
+
+      if (themeKey === "blue") {
+        $("primaryCustColor").value = "#00E5FF";
+        $("primaryCustHex").value = "#00E5FF";
+        $("secondaryCustColor").value = "#087CFF";
+        $("secondaryCustHex").value = "#087CFF";
+        $("chipPreviewTheme").textContent = "Theme: Electric Blue";
+      } else if (themeKey === "minimal") {
+        $("primaryCustColor").value = "#E2E8F0";
+        $("primaryCustHex").value = "#E2E8F0";
+        $("secondaryCustColor").value = "#94A3B8";
+        $("secondaryCustHex").value = "#94A3B8";
+        $("chipPreviewTheme").textContent = "Theme: Minimal Dark";
+      } else {
+        // Professional Blue & Gold
+        $("primaryCustColor").value = "#087CFF";
+        $("primaryCustHex").value = "#087CFF";
+        $("secondaryCustColor").value = "#FFC107";
+        $("secondaryCustHex").value = "#FFC107";
+        $("chipPreviewTheme").textContent = "Theme: Professional";
+      }
+      updateCustMiniPreview();
+    }
+
+    function updateCustColor(type, val) {
+      if (type === "primary") {
+        $("primaryCustHex").value = val.toUpperCase();
+      } else {
+        $("secondaryCustHex").value = val.toUpperCase();
+      }
+      updateCustMiniPreview();
+    }
+
+    function updateCustHex(type, val) {
+      if (/^#[0-9a-f]{6}$/i.test(val)) {
+        if (type === "primary") $("primaryCustColor").value = val;
+        else $("secondaryCustColor").value = val;
+        updateCustMiniPreview();
+      }
+    }
+
+    function updateCustOpacity(val) {
+      $("custOpacityVal").textContent = val + "%";
+      updateCustMiniPreview();
+    }
+
+    function setCustScale(scaleVal) {
+      currentCustScale = scaleVal;
+      $("btnScale78")?.classList.toggle("active", scaleVal === "78%");
+      $("btnScale90")?.classList.toggle("active", scaleVal === "90%");
+      $("chipPreviewScale").textContent = "Scale: " + scaleVal;
+      updateCustMiniPreview();
+    }
+
+    function setCustPosition(posVal) {
+      currentCustPosition = posVal;
+      $("btnPosTop")?.classList.toggle("active", posVal === "TOP");
+      $("btnPosBottom")?.classList.toggle("active", posVal === "BOTTOM");
+      $("chipPreviewPos").textContent = "Pos: " + posVal;
+      updateCustMiniPreview();
+    }
+
+    function setCustLayout(layoutVal) {
+      currentCustLayout = layoutVal;
+      $("btnLayoutSlim")?.classList.toggle("active", layoutVal === "SLIM BAR");
+      $("btnLayoutFull")?.classList.toggle("active", layoutVal === "FULL");
+      $("chipPreviewLayout").textContent = "Layout: " + layoutVal;
+      updateCustMiniPreview();
+    }
+
+    function updateCustText() {
+      const tour = $("custTournamentTitle")?.value.trim() || "CRICKET LIVE";
+      const ven = $("custVenue")?.value.trim() || "";
+      const sp = $("custSponsorNames")?.value.trim() || "";
+
+      if ($("miniTournament")) $("miniTournament").textContent = tour.toUpperCase();
+      if ($("miniVenue")) $("miniVenue").textContent = ven;
+      if ($("miniSponsorTag")) {
+        $("miniSponsorTag").textContent = sp ? `🤝 ${sp.split(',')[0].trim()}` : "";
+      }
+    }
+
+    function updateCustMiniPreview() {
+      const primary = $("primaryCustColor")?.value || "#087CFF";
+      const secondary = $("secondaryCustColor")?.value || "#FFC107";
+      const op = parseInt($("custOpacitySlider")?.value || "88", 10) / 100;
+
+      const card = $("miniScoreCard");
+      if (card) {
+        card.style.background = `rgba(7, 13, 25, ${op})`;
+      }
+      if ($("miniAccentLeft")) $("miniAccentLeft").style.background = primary;
+      if ($("miniAccentRight")) $("miniAccentRight").style.background = secondary;
+
+      const wrapper = $("custMiniBroadcast");
+      if (wrapper) {
+        const sc = currentCustScale === "90%" ? 0.95 : 0.85;
+        wrapper.style.transform = `scale(${sc})`;
+        wrapper.style.transformOrigin = currentCustPosition === "TOP" ? "top center" : "bottom center";
+      }
+
+      if ($("miniStatsBar")) {
+        $("miniStatsBar").style.display = currentCustLayout === "FULL" ? "flex" : "none";
+      }
+
+      updateCustText();
+    }
+
+    function applyCustomizationToLiveBroadcast() {
+      const primary = $("primaryCustColor").value;
+      const secondary = $("secondaryCustColor").value;
+      const opacity = parseInt($("custOpacitySlider").value, 10);
+      const scale = currentCustScale === "90%" ? 0.90 : 0.78;
+      const position = currentCustPosition.toLowerCase();
+      const layout = currentCustLayout === "FULL" ? "normal" : "sonyliv";
+      const tournament = $("custTournamentTitle").value.trim();
+      const venue = $("custVenue").value.trim();
+      const sponsors = $("custSponsorNames").value.trim();
+
+      // Mirror into match configuration fields
+      if ($("primaryColor")) $("primaryColor").value = primary;
+      if ($("secondaryColor")) $("secondaryColor").value = secondary;
+      if ($("matchTitle")) $("matchTitle").value = tournament;
+      if ($("venue")) $("venue").value = venue;
+      if ($("matchSponsors")) $("matchSponsors").value = sponsors;
+      current.tournament = tournament;
+      current.venue = venue;
+      current.sponsors = sponsors;
+
+      const settings = {
+        theme: currentCustTheme,
+        primary: primary,
+        secondary: secondary,
+        opacity: opacity,
+        scale: scale,
+        position: position,
+        layout: layout,
+        tournament: tournament,
+        venue: venue,
+        sponsors: sponsors,
+        sponsorsList: sponsorsList,
+        sponsorInterval: parseInt($("spRotationInterval")?.value || "8", 10)
+      };
+
+      try {
+        localStorage.setItem("chOverlaySettings", JSON.stringify(settings));
+        localStorage.setItem("overlay_size_pref", layout);
+        localStorage.setItem("overlay_scale_pref", scale.toString());
+        localStorage.setItem("overlay_pos_pref", position);
+
+        if (broadcastSyncChannel) {
+          broadcastSyncChannel.postMessage({ type: 'SETTINGS_UPDATE', payload: settings });
+          broadcastSyncChannel.postMessage({ type: 'STATE_UPDATE', payload: current });
+        }
+      } catch (_) {}
+
+      fetch("/api/overlay-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify(settings)
+      }).catch(() => {});
+
+      render();
+      toast("⚡ Broadcast overlay customization applied live!", "good");
+    }
+
+    // =========================================================
+    // SCREEN 9: COMMERCIAL SPONSOR MANAGEMENT
+    // =========================================================
+    let sponsorsList = [
+      { id: "sp_1", category: "Title Sponsor", name: "ABC Motors", logo: "" },
+      { id: "sp_2", category: "Powered By", name: "XYZ Sports", logo: "" },
+      { id: "sp_3", category: "Official Partner", name: "Dream11", logo: "" }
+    ];
+    let tempUploadedLogoData = "";
+
+    function loadSponsorsFromStorage() {
+      try {
+        const saved = localStorage.getItem("chSponsorsList");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            sponsorsList = parsed;
+          }
+        }
+        const savedInt = localStorage.getItem("chSponsorInterval");
+        if (savedInt && $("spRotationInterval")) {
+          $("spRotationInterval").value = savedInt;
+        }
+      } catch (_) {}
+      renderSponsorsList();
+    }
+
+    function renderSponsorsList() {
+      const container = $("sponsorsListContainer");
+      const badge = $("sponsorCountBadge");
+      if (!container) return;
+
+      if (badge) badge.textContent = `${sponsorsList.length} Active`;
+
+      if (sponsorsList.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:24px;background:rgba(255,255,255,0.02);border-radius:8px;color:#94a3b8;font-size:12px">
+            No commercial sponsors added yet. Click <b>"➕ Add Sponsor"</b> above to configure title and partner sponsors.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = sponsorsList.map((sp, idx) => `
+        <div class="sponsor-item-card">
+          <div class="sp-logo-box">
+            ${sp.logo ? `<img src="${sp.logo}" alt="Logo">` : `<span>🤝</span>`}
+          </div>
+          <div class="sp-meta">
+            <span class="sp-category">${safe(sp.category || "PARTNER")}</span>
+            <span class="sp-name">${safe(sp.name || "Sponsor")}</span>
+          </div>
+          <div class="sp-actions">
+            <button type="button" class="tool-btn" onclick="editSponsor(${idx})" title="Edit sponsor">✏️ Edit</button>
+            <button type="button" class="tool-btn danger" onclick="deleteSponsor(${idx})" title="Delete sponsor">🗑️</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function openAddSponsorModal() {
+      $("sponsorFormTitle").textContent = "Add Commercial Sponsor";
+      $("spEditIndex").value = "-1";
+      $("spCategoryInput").value = "Official Partner";
+      $("spDisplayText").value = "";
+      tempUploadedLogoData = "";
+      $("logoPreviewThumb").style.display = "none";
+      $("sponsorEditForm").style.display = "block";
+      $("spDisplayText").focus();
+    }
+
+    function closeSponsorForm() {
+      $("sponsorEditForm").style.display = "none";
+      tempUploadedLogoData = "";
+    }
+
+    function editSponsor(idx) {
+      const sp = sponsorsList[idx];
+      if (!sp) return;
+      $("sponsorFormTitle").textContent = "Edit Commercial Sponsor";
+      $("spEditIndex").value = idx.toString();
+      $("spCategoryInput").value = sp.category || "Official Partner";
+      $("spDisplayText").value = sp.name || "";
+      tempUploadedLogoData = sp.logo || "";
+      if (sp.logo) {
+        $("spLogoPreviewImg").src = sp.logo;
+        $("logoPreviewThumb").style.display = "flex";
+      } else {
+        $("logoPreviewThumb").style.display = "none";
+      }
+      $("sponsorEditForm").style.display = "block";
+      $("spDisplayText").focus();
+    }
+
+    function deleteSponsor(idx) {
+      if (confirm(`Delete sponsor "${sponsorsList[idx]?.name}"?`)) {
+        sponsorsList.splice(idx, 1);
+        renderSponsorsList();
+        syncSponsorsToOverlay();
+        toast("Sponsor deleted.");
+      }
+    }
+
+    function handleSponsorLogoUpload(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        toast("Logo file is too large (max 2MB).", "warning");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        tempUploadedLogoData = event.target.result;
+        $("spLogoPreviewImg").src = tempUploadedLogoData;
+        $("logoPreviewThumb").style.display = "flex";
+        toast("Sponsor logo loaded successfully.");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeSponsorLogo() {
+      tempUploadedLogoData = "";
+      $("spLogoFileInput").value = "";
+      $("logoPreviewThumb").style.display = "none";
+    }
+
+    function saveSponsorFromForm() {
+      const name = $("spDisplayText").value.trim();
+      const cat = $("spCategoryInput").value.trim() || "Official Partner";
+      if (!name) {
+        toast("Please enter a sponsor display name.", "warning");
+        $("spDisplayText").focus();
+        return;
+      }
+
+      const idx = parseInt($("spEditIndex").value, 10);
+      const sponsorObj = {
+        id: idx >= 0 ? sponsorsList[idx].id : "sp_" + Date.now(),
+        category: cat,
+        name: name,
+        logo: tempUploadedLogoData
+      };
+
+      if (idx >= 0 && idx < sponsorsList.length) {
+        sponsorsList[idx] = sponsorObj;
+        toast(`Updated sponsor "${name}".`);
+      } else {
+        sponsorsList.push(sponsorObj);
+        toast(`Added sponsor "${name}".`);
+      }
+
+      closeSponsorForm();
+      renderSponsorsList();
+      syncSponsorsToOverlay();
+    }
+
+    function updateSponsorInterval(val) {
+      try {
+        localStorage.setItem("chSponsorInterval", val);
+      } catch (_) {}
+      syncSponsorsToOverlay();
+      toast(`Rotation interval set to ${val} seconds.`);
+    }
+
+    function syncSponsorsToOverlay() {
+      try {
+        localStorage.setItem("chSponsorsList", JSON.stringify(sponsorsList));
+        const interval = parseInt($("spRotationInterval")?.value || "8", 10);
+        localStorage.setItem("chSponsorInterval", interval.toString());
+
+        const names = sponsorsList.map(s => s.name).join(", ");
+        if ($("custSponsorNames")) $("custSponsorNames").value = names;
+        if ($("matchSponsors")) $("matchSponsors").value = names;
+        current.sponsors = names;
+
+        if (broadcastSyncChannel) {
+          broadcastSyncChannel.postMessage({
+            type: 'SETTINGS_UPDATE',
+            payload: {
+              sponsorsList: sponsorsList,
+              rotationInterval: interval,
+              sponsors: names
+            }
+          });
+        }
+      } catch (_) {}
+
+      fetch("/api/overlay-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify({
+          sponsorsList: sponsorsList,
+          rotationInterval: parseInt($("spRotationInterval")?.value || "8", 10),
+          sponsors: sponsorsList.map(s => s.name).join(", ")
+        })
+      }).catch(() => {});
+
+      updateCustText();
+      toast("Sponsors synchronized with live broadcast overlay!");
+    }
+
     // Tab Navigation
     document.querySelectorAll(".nav").forEach(b => b.addEventListener("click", () => {
       document.querySelectorAll(".nav").forEach(x => x.classList.remove("active"));
@@ -2778,9 +3827,12 @@
       const p = b.dataset.page;
       const targetMap = {
         dashboard: "dashboardCard",
+        stream: "streamingDashboardCard",
+        customization: "overlayCustomizationCard",
+        sponsors: "sponsorManagementCard",
         scorecard: "scorecardLinkBar",
         match: "matchCard",
-        design: "designCard",
+        design: "overlayCustomizationCard",
         display: "displayCard",
         obs: "obsCard",
         data: "dataCard"
@@ -2846,6 +3898,27 @@
             if (el) el.checked = s.displayOptions[k];
           });
         }
+        if (s.tournament || s.title) {
+          if ($("custTournamentTitle")) $("custTournamentTitle").value = s.tournament || s.title;
+        }
+        if (s.venue && $("custVenue")) $("custVenue").value = s.venue;
+        if (s.sponsors && $("custSponsorNames")) $("custSponsorNames").value = s.sponsors;
+        if (s.primary) {
+          if ($("primaryCustColor")) $("primaryCustColor").value = s.primary;
+          if ($("primaryCustHex")) $("primaryCustHex").value = s.primary.toUpperCase();
+        }
+        if (s.secondary) {
+          if ($("secondaryCustColor")) $("secondaryCustColor").value = s.secondary;
+          if ($("secondaryCustHex")) $("secondaryCustHex").value = s.secondary.toUpperCase();
+        }
+        if (s.opacity) {
+          if ($("custOpacitySlider")) $("custOpacitySlider").value = s.opacity;
+          if ($("custOpacityVal")) $("custOpacityVal").textContent = s.opacity + "%";
+        }
+        if (s.scale) setCustScale(s.scale >= 0.85 ? "90%" : "78%");
+        if (s.position) setCustPosition(s.position.toUpperCase());
+        if (s.layout) setCustLayout(s.layout.toLowerCase() === "normal" || s.layout.toLowerCase() === "full" ? "FULL" : "SLIM BAR");
+        if (s.theme) selectThemePreset(s.theme);
       } catch (_) {}
     }
 
@@ -2853,6 +3926,8 @@
       const obsUrl = getOverlayUrl();
       setText("obsUrlText", obsUrl);
       loadSaved();
+      loadSponsorsFromStorage();
+      updateCustMiniPreview();
       render();
       startPoll();
       testConnection();

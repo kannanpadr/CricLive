@@ -1180,142 +1180,26 @@ body.layout-compact .team-name {
   margin-top: 2px;
 }
 
-/* Interactive Overlay Size & Position Controls (Discrete, Auto-Fading) */
-.overlay-controls {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 9999;
-  background: rgba(10, 18, 32, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 10px;
-  padding: 6px 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  pointer-events: auto;
-  opacity: 1;
-  transition: opacity 0.2s ease;
+/* Sponsor logo & category badge */
+.sponsor-logo-img {
+  height: 16px;
+  max-width: 48px;
+  object-fit: contain;
+  vertical-align: middle;
+  border-radius: 2px;
+  margin-right: 4px;
 }
 
-.overlay-controls:hover, .overlay-controls.active {
-  opacity: 1;
-}
-
-.ctrl-label {
-  font-size: 10px;
-  font-weight: 800;
-  color: #94a3b8;
+.sponsor-category-tag {
+  font-size: 8px;
   text-transform: uppercase;
-}
-
-.ctrl-btn {
-  background: #13243f;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #e2e8f0;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.ctrl-btn:hover {
-  background: #1d355c;
-}
-
-.ctrl-btn.active {
-  background: #087cff;
-  border-color: #38bdf8;
-  color: #ffffff;
-}
-
-.ctrl-btn.close {
-  background: rgba(239, 68, 68, 0.25);
-  border: 1px solid rgba(239, 68, 68, 0.45);
-  color: #fca5a5;
-  border-radius: 6px;
-  padding: 5px 12px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 32px;
-}
-
-.ctrl-btn.close:hover, .ctrl-btn.close:active {
-  background: #ef4444;
-  color: #ffffff;
-}
-
-.ctrl-select {
-  background: #13243f;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #38bdf8;
-  border-radius: 6px;
-  padding: 3px 6px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  outline: none;
-}
-
-.ctrl-floating-toggle {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 9998;
-  background: rgba(10, 18, 32, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #38bdf8;
-  border-radius: 20px;
-  padding: 5px 11px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  pointer-events: auto;
-  backdrop-filter: blur(8px);
-  display: block;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  transition: all 0.15s ease;
-}
-
-.ctrl-floating-toggle:hover {
-  background: #087cff;
-  color: #ffffff;
-  border-color: #38bdf8;
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+  margin-right: 2px;
 }
 </style>
 </head>
 <body class="layout-sonyliv">
-
-<!-- FLOATING CONTROLS FOR STREAMER / OPERATOR (Left Side) -->
-<div class="overlay-controls active" id="overlayControls" style="display:none;">
-  <span class="ctrl-label">📺 Style:</span>
-  <button class="ctrl-btn active" id="btnSizeSony" onclick="setOverlaySize('sonyliv', true)" title="SonyLIV ultra-slim bottom strip (~38px)">SonyLIV</button>
-  <button class="ctrl-btn" id="btnSizeHotstar" onclick="setOverlaySize('hotstar', true)" title="JioHotstar / Star Sports broadcast bar">Hotstar</button>
-  <button class="ctrl-btn" id="btnSizeMini" onclick="setOverlaySize('mini', true)" title="Slim 2-row bar">Mini</button>
-  <button class="ctrl-btn" id="btnSizeCompact" onclick="setOverlaySize('compact', true)" title="Scorebar only">Compact</button>
-  <button class="ctrl-btn" id="btnSizeNormal" onclick="setOverlaySize('normal', true)" title="Full details">Full</button>
-
-  <span style="color:rgba(255,255,255,0.25)">|</span>
-  <span class="ctrl-label">🔍 Scale:</span>
-  <button class="ctrl-btn" id="btnScaleSlim" onclick="setOverlayScale(0.68)" title="68% ultra-low profile">68%</button>
-  <button class="ctrl-btn active" id="btnScaleMed" onclick="setOverlayScale(0.74)" title="74% default">74%</button>
-  <button class="ctrl-btn" id="btnScaleFull" onclick="setOverlayScale(0.86)" title="86% large">86%</button>
-
-  <span style="color:rgba(255,255,255,0.25)">|</span>
-  <button class="ctrl-btn" id="btnTogglePos" onclick="toggleOverlayPos()">↕ Pos</button>
-  <button class="ctrl-btn close" id="btnCloseControls" onclick="hideControls()" title="Close overlay controls">✕ Close</button>
-</div>
-
-<!-- DEFAULT LEFT SIDE SETTING ICON ONLY -->
-<button class="ctrl-floating-toggle" id="btnFloatingToggle" onclick="showControls()" title="Overlay Settings">⚙</button>
 
 <!-- MAIN OVERLAY CONTAINER -->
 <div class="overlay-container" id="overlayContainer">
@@ -1328,7 +1212,7 @@ body.layout-compact .team-name {
         <span class="hdr-title" id="oTournament">CRICKET LIVE</span>
         <span class="hdr-sep">•</span>
         <span class="hdr-venue" id="oVenue">Live Streaming</span>
-        <span class="sponsor-slot" id="oSponsorSlot" style="display:none;"><span class="hdr-sep">•</span> <span class="sponsor-badge">🤝 <span id="oSponsorText"></span></span></span>
+        <span class="sponsor-slot" id="oSponsorSlot" style="display:none;"><span class="hdr-sep">•</span> <span class="sponsor-badge" id="oSponsorBadge"><img id="oSponsorLogo" class="sponsor-logo-img" style="display:none;" alt="Sponsor Logo"><small class="sponsor-category-tag" id="oSponsorCategory">PARTNER</small> <span id="oSponsorText"></span></span></span>
       </div>
       <div class="hdr-right">
         <span class="stale-badge" id="staleBadge">⚠️ DELAYED</span>
@@ -1362,7 +1246,7 @@ body.layout-compact .team-name {
           <span class="equation-pill proj-pill" id="statProjected"><small>PROJ</small> <b id="oProjected">182</b></span>
           <span class="equation-pill target-pill" id="statTarget" style="display:none"><small id="oTargetLbl">TARGET</small> <b id="oTarget">—</b></span>
           <span class="equation-pill chase-pill" id="chaseBox" style="display:none"><span id="oTicker"></span></span>
-          <span class="equation-pill sponsor-pill" id="oSponsorPill" style="display:none;"><small>PARTNER</small> <b id="oSponsorName"></b></span>
+          <span class="equation-pill sponsor-pill" id="oSponsorPill" style="display:none;"><img id="oSponsorPillLogo" class="sponsor-logo-img" style="display:none;" alt="Sponsor Logo"><small class="sponsor-category-tag" id="oSponsorPillCat">PARTNER</small> <b id="oSponsorName"></b></span>
         </div>
       </div>
 
@@ -1679,73 +1563,132 @@ function render(data = current) {
 }
 
 // =========================================================
+// SPONSOR ROTATION ENGINE (Supports Logos & Categories)
+// =========================================================
+let sponsorRotationTimer = null;
+let currentSponsorIndex = 0;
+let sponsorsData = [];
+let sponsorIntervalMs = 8000;
+
+function updateSponsorsList(newList, intervalSec) {
+  if (Array.isArray(newList) && newList.length > 0) {
+    sponsorsData = newList;
+  } else if (typeof newList === "string" && newList.trim()) {
+    sponsorsData = newList.split(",").map((s, idx) => ({
+      id: "sp_" + idx,
+      name: s.trim(),
+      category: "PARTNER",
+      logo: ""
+    })).filter(x => x.name);
+  } else {
+    sponsorsData = [];
+  }
+  if (intervalSec && !isNaN(intervalSec)) {
+    sponsorIntervalMs = Math.max(3000, parseInt(intervalSec, 10) * 1000);
+  }
+  renderActiveSponsor();
+  startSponsorRotation();
+}
+
+function renderActiveSponsor() {
+  const spPill = $("oSponsorPill");
+  const spSlot = $("oSponsorSlot");
+  if (!sponsorsData || sponsorsData.length === 0) {
+    if (spPill) spPill.style.display = "none";
+    if (spSlot) spSlot.style.display = "none";
+    return;
+  }
+  const item = sponsorsData[currentSponsorIndex % sponsorsData.length];
+  if (!item) return;
+
+  const name = item.name || item.text || item.displayName || "";
+  const category = (item.category || "PARTNER").toUpperCase();
+  const logo = item.logo || "";
+
+  // Top header ribbon slot
+  if (spSlot) {
+    spSlot.style.display = "inline-flex";
+    setText("oSponsorText", name);
+    const catEl = $("oSponsorCategory");
+    if (catEl) catEl.textContent = category;
+    const logoEl = $("oSponsorLogo");
+    if (logoEl) {
+      if (logo) {
+        logoEl.src = logo;
+        logoEl.style.display = "inline-block";
+      } else {
+        logoEl.style.display = "none";
+      }
+    }
+  }
+
+  // Pill slot in score hub
+  if (spPill) {
+    spPill.style.display = "inline-flex";
+    setText("oSponsorName", name);
+    const pillCat = $("oSponsorPillCat");
+    if (pillCat) pillCat.textContent = category;
+    const pillLogo = $("oSponsorPillLogo");
+    if (pillLogo) {
+      if (logo) {
+        pillLogo.src = logo;
+        pillLogo.style.display = "inline-block";
+      } else {
+        pillLogo.style.display = "none";
+      }
+    }
+  }
+}
+
+function startSponsorRotation() {
+  if (sponsorRotationTimer) clearInterval(sponsorRotationTimer);
+  if (sponsorsData.length > 1) {
+    sponsorRotationTimer = setInterval(() => {
+      currentSponsorIndex = (currentSponsorIndex + 1) % sponsorsData.length;
+      renderActiveSponsor();
+    }, sponsorIntervalMs);
+  }
+}
+
+// =========================================================
 // OVERLAY SIZE & POSITION CONTROLS
 // =========================================================
-function setOverlaySize(size, isUserAction = false) {
+function setOverlaySize(size) {
   document.body.classList.remove("layout-sonyliv", "layout-hotstar", "layout-mini", "layout-compact", "layout-normal");
-  const bSony = $("btnSizeSony");
-  const bHotstar = $("btnSizeHotstar");
-  const bMini = $("btnSizeMini");
-  const bCompact = $("btnSizeCompact");
-  const bNormal = $("btnSizeNormal");
-  if (bSony) bSony.classList.remove("active");
-  if (bHotstar) bHotstar.classList.remove("active");
-  if (bMini) bMini.classList.remove("active");
-  if (bCompact) bCompact.classList.remove("active");
-  if (bNormal) bNormal.classList.remove("active");
-
   const s = String(size || "sonyliv").toLowerCase();
   if (s === "hotstar") {
     document.body.classList.add("layout-hotstar");
-    if (bHotstar) bHotstar.classList.add("active");
-  } else if (s === "mini") {
+  } else if (s === "mini" || s === "slim" || s === "slim bar") {
     document.body.classList.add("layout-mini");
-    if (bMini) bMini.classList.add("active");
   } else if (s === "compact") {
     document.body.classList.add("layout-compact");
-    if (bCompact) bCompact.classList.add("active");
   } else if (s === "normal" || s === "full") {
     document.body.classList.add("layout-normal");
-    if (bNormal) bNormal.classList.add("active");
   } else {
     // Default: SonyLIV Ultra-Slim bottom strip
     document.body.classList.add("layout-sonyliv");
-    if (bSony) bSony.classList.add("active");
   }
 
   try {
     localStorage.setItem("overlay_size_pref", s);
-    if (isUserAction) {
-      localStorage.setItem("overlay_user_override", "1");
-    }
-    if (broadcastSyncChannel) {
-      broadcastSyncChannel.postMessage({ type: 'OVERLAY_UI_CHANGE', payload: { size: s, isUserAction } });
-    }
   } catch (e) {}
 }
 
 function setOverlayScale(scale) {
-  const val = parseFloat(scale) || 0.74;
+  let val = parseFloat(scale) || 0.78;
+  if (val > 1) val = val / 100;
   document.documentElement.style.setProperty("--overlay-scale", val.toString());
-  const bSlim = $("btnScaleSlim");
-  const bMed = $("btnScaleMed");
-  const bFull = $("btnScaleFull");
-  if (bSlim) bSlim.classList.toggle("active", Math.abs(val - 0.68) < 0.04);
-  if (bMed) bMed.classList.toggle("active", Math.abs(val - 0.74) < 0.04);
-  if (bFull) bFull.classList.toggle("active", Math.abs(val - 0.86) < 0.05);
   try { localStorage.setItem("overlay_scale_pref", val.toString()); } catch (e) {}
 }
 
-function goBackToScore() {
-  if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.backToControl === 'function') {
-    window.AndroidScoreBridge.backToControl();
-  } else if (window.location.protocol === 'file:') {
-    window.location.href = 'index.html';
-  } else if (window.history.length > 1) {
-    window.history.back();
+function setOverlayPosition(pos) {
+  const p = String(pos || "bottom").toLowerCase();
+  if (p === "top") {
+    document.body.classList.add("pos-top");
   } else {
-    window.location.href = '/';
+    document.body.classList.remove("pos-top");
   }
+  try { localStorage.setItem("overlay_pos_pref", p); } catch (e) {}
 }
 
 function toggleOverlayPos() {
@@ -1754,46 +1697,31 @@ function toggleOverlayPos() {
   try { localStorage.setItem("overlay_pos_pref", isTop ? "top" : "bottom"); } catch (e) {}
 }
 
-function hideControls() {
-  const c = $("overlayControls");
-  const f = $("btnFloatingToggle");
-  if (c) {
-    c.style.display = "none";
-    c.classList.remove("active");
-  }
-  if (f) f.style.display = "block";
-  try {
-    if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.setControlsExpanded === 'function') {
-      window.AndroidScoreBridge.setControlsExpanded(false);
-    }
-  } catch (e) {}
-}
-
-function showControls() {
-  const c = $("overlayControls");
-  const f = $("btnFloatingToggle");
-  if (c) {
-    c.style.display = "flex";
-    c.classList.add("active");
-  }
-  if (f) f.style.display = "none";
-  try {
-    if (window.AndroidScoreBridge && typeof window.AndroidScoreBridge.setControlsExpanded === 'function') {
-      window.AndroidScoreBridge.setControlsExpanded(true);
-    }
-  } catch (e) {}
-}
-
-function togglePreviewBg() {
-  document.body.classList.toggle("preview-backdrop");
-}
-
 // =========================================================
 // APPLY SETTINGS
 // =========================================================
 function applySettings(cfg) {
   if (!cfg) return;
   const root = document.documentElement;
+
+  // Theme presets
+  if (cfg.theme) {
+    const t = String(cfg.theme).toLowerCase();
+    if (t.includes("electric") || t === "blue") {
+      root.style.setProperty("--blue", "#00e5ff");
+      root.style.setProperty("--blue-glow", "rgba(0, 229, 255, 0.4)");
+      root.style.setProperty("--gold", "#087cff");
+    } else if (t.includes("minimal") || t === "dark") {
+      root.style.setProperty("--blue", "#cbd5e1");
+      root.style.setProperty("--blue-glow", "rgba(203, 213, 225, 0.2)");
+      root.style.setProperty("--gold", "#94a3b8");
+    } else {
+      // Professional Blue & Gold
+      root.style.setProperty("--blue", "#087cff");
+      root.style.setProperty("--blue-glow", "rgba(8, 124, 255, 0.35)");
+      root.style.setProperty("--gold", "#ffc107");
+    }
+  }
 
   const primary = cfg.primary || cfg.primaryColor;
   const secondary = cfg.secondary || cfg.secondaryColor;
@@ -1812,14 +1740,37 @@ function applySettings(cfg) {
   if (cfg.opacity !== undefined) {
     const card = $("broadcastCard");
     if (card) {
-      const op = Math.max(0.2, Math.min(1.0, parseFloat(cfg.opacity) || 0.86));
+      let op = parseFloat(cfg.opacity);
+      if (op > 1) op = op / 100;
+      op = Math.max(0.2, Math.min(1.0, op || 0.86));
       card.style.background = `rgba(7, 13, 25, ${op})`;
     }
   }
 
-  // Only apply server layout if the user hasn't explicitly selected a size on this screen
-  if (cfg.layout && !localStorage.getItem("overlay_user_override")) {
-    setOverlaySize(cfg.layout, false);
+  if (cfg.scale !== undefined) {
+    setOverlayScale(cfg.scale);
+  }
+
+  if (cfg.position) {
+    setOverlayPosition(cfg.position);
+  }
+
+  if (cfg.layout) {
+    setOverlaySize(cfg.layout);
+  }
+
+  if (cfg.tournament) {
+    setText("oTournament", String(cfg.tournament).toUpperCase());
+  }
+  if (cfg.venue) {
+    setText("oVenue", String(cfg.venue));
+  }
+
+  // Sponsors
+  if (cfg.sponsorsList && Array.isArray(cfg.sponsorsList)) {
+    updateSponsorsList(cfg.sponsorsList, cfg.sponsorInterval || cfg.rotationInterval);
+  } else if (cfg.sponsors) {
+    updateSponsorsList(cfg.sponsors, cfg.sponsorInterval || cfg.rotationInterval);
   }
 
   const showLogos = cfg.showLogos !== false;
@@ -1970,6 +1921,14 @@ function boot() {
   if (params.get('pos') === 'top' || localStorage.getItem('overlay_pos_pref') === 'top') {
     document.body.classList.add("pos-top");
   }
+
+  // Restore saved settings & sponsors
+  try {
+    const savedSettings = localStorage.getItem('chOverlaySettings');
+    if (savedSettings) applySettings(JSON.parse(savedSettings));
+    const savedSponsors = localStorage.getItem('chSponsorsList');
+    if (savedSponsors) updateSponsorsList(JSON.parse(savedSponsors));
+  } catch (_) {}
 
   // Initial state from cached storage or defaults on startup
   try {
