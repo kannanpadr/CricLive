@@ -1005,107 +1005,54 @@
     }
 
     /* =========================================================
-       MOBILE QUICK-BALL CONTROLS
+       DASHBOARD AUTO-SYNC STATUS CARD
        ========================================================= */
-    .quick-scoring-bar {
-      background: rgba(10, 20, 36, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      padding: 10px;
-      margin-top: 10px;
-    }
-
-    .quick-scoring-label {
-      font-size: 11px;
-      font-weight: 750;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      margin-bottom: 8px;
+    .dash-auto-sync-status {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(8, 124, 255, 0.12), rgba(16, 185, 129, 0.08));
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      margin-top: 12px;
+      flex-wrap: wrap;
     }
 
-    .ball-buttons-grid {
+    .sync-status-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.4);
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      place-items: center;
+      font-size: 16px;
+      color: #38bdf8;
+      flex-shrink: 0;
+    }
+
+    .sync-status-info {
+      flex: 1;
+      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .sync-status-info strong {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
       gap: 6px;
     }
 
-    .ball-btn {
-      padding: 8px 4px;
-      min-height: 42px;
-      font-size: 13px;
-      font-weight: 800;
-      border-radius: 8px;
-      background: #13243f;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #ffffff;
-    }
-
-    .ball-btn.four {
-      background: linear-gradient(135deg, #065f46, #059669);
-      border-color: #34d399;
-      color: #fff;
-    }
-
-    .ball-btn.six {
-      background: linear-gradient(135deg, #92400e, #d97706);
-      border-color: #fcd34d;
-      color: #fff;
-    }
-
-    .ball-btn.wicket {
-      background: linear-gradient(135deg, #991b1b, #dc2626);
-      border-color: #f87171;
-      color: #fff;
-    }
-
-    .ball-btn.extra {
-      background: #1e293b;
-      border-color: #38bdf8;
-      color: #38bdf8;
-    }
-
-    .ball-btn.action {
-      background: #1a2f4c;
-      border-color: #60a5fa;
-      color: #93c5fd;
-      font-size: 11.5px;
-    }
-
-    .ball-btn.undo {
-      background: #372027;
-      border-color: #f43f5e;
-      color: #fda4af;
-    }
-
-    /* =========================================================
-       QUICK EDIT ACCORDION
-       ========================================================= */
-    .quick-edit-accordion {
-      margin-top: 10px;
-    }
-
-    .quick-edit-toggle {
-      width: 100%;
-      justify-content: space-between;
-      padding: 10px 14px;
-      background: rgba(13, 27, 49, 0.6);
-      border: 1px dashed rgba(255, 255, 255, 0.16);
-      color: #cbd5e1;
-      font-size: 12.5px;
-    }
-
-    .quick-edit-body {
-      background: #08162b;
-      border: 1px solid var(--line);
-      border-top: 0;
-      border-radius: 0 0 10px 10px;
-      padding: 14px;
-      display: grid;
-      gap: 12px;
+    .sync-status-info span {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.4;
     }
 
     .form-row-2 {
@@ -1118,6 +1065,22 @@
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
+    }
+
+    /* CARD HIGHLIGHT & TAB TRANSITIONS */
+    .card-highlight-pulse {
+      animation: cardPulse 1.2s ease-out;
+    }
+
+    @keyframes cardPulse {
+      0% { box-shadow: 0 0 0 0 rgba(8, 124, 255, 0.8); }
+      50% { box-shadow: 0 0 24px 6px rgba(56, 189, 248, 0.65); }
+      100% { box-shadow: var(--shadow); }
+    }
+
+    @keyframes tabFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* =========================================================
@@ -1259,7 +1222,7 @@
        ========================================================= */
     @media (max-width: 860px) {
       .appbar {
-        padding: 8px 12px;
+        padding: 8px 10px;
         height: auto;
         min-height: 52px;
       }
@@ -1275,7 +1238,7 @@
         font-size: 15px;
       }
 
-      .brand small {
+      .brand-sub {
         display: none;
       }
 
@@ -1284,14 +1247,15 @@
       }
 
       .top-actions button {
-        padding: 6px 10px;
-        min-height: 34px;
-        font-size: 11px;
+        padding: 6px 9px;
+        min-height: 36px;
+        font-size: 11.5px;
+        border-radius: 8px;
       }
 
       .connection {
         font-size: 11px;
-        padding: 3px 7px;
+        padding: 4px 8px;
       }
 
       #connectionText {
@@ -1308,13 +1272,15 @@
         flex-direction: row;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        padding: 6px 8px;
+        scroll-snap-type: x mandatory;
+        padding: 8px 10px;
         border-right: 0;
         border-bottom: 1px solid var(--line);
         position: sticky;
         top: 52px;
         z-index: 40;
-        background: #071529;
+        background: rgba(6, 18, 38, 0.95);
+        backdrop-filter: blur(16px);
         gap: 6px;
       }
 
@@ -1326,10 +1292,19 @@
         white-space: nowrap;
         width: auto;
         flex-shrink: 0;
-        padding: 6px 11px;
+        scroll-snap-align: start;
+        padding: 7px 13px;
         font-size: 12px;
-        border-radius: 7px;
-        background: #0b1a2f;
+        border-radius: 20px;
+        background: rgba(16, 36, 63, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .nav.active {
+        background: linear-gradient(135deg, #087cff, #005be7);
+        border-color: #38bdf8;
+        box-shadow: 0 2px 10px rgba(8, 124, 255, 0.45);
+        color: #ffffff;
       }
 
       .aside-bottom {
@@ -1337,7 +1312,7 @@
       }
 
       .main {
-        padding: 10px 8px;
+        padding: 10px 8px 40px;
       }
 
       .grid {
@@ -1346,26 +1321,35 @@
       }
 
       .card {
-        border-radius: 10px;
+        border-radius: 12px;
+        margin-bottom: 10px;
       }
 
       .card-head {
-        padding: 10px 12px 8px;
+        padding: 12px 14px 10px;
       }
 
       .card-body {
-        padding: 10px 12px;
+        padding: 12px 14px;
       }
 
       .link-input-group {
         flex-direction: column;
+        gap: 8px;
       }
 
       .link-sync-btn {
         width: 100%;
+        min-height: 44px;
       }
 
       /* Broadcast Card Mobile Adaptations */
+      .dash-broadcast-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+      }
+
       .card-header {
         padding: 2px 8px;
         font-size: 9px;
@@ -1417,22 +1401,43 @@
         display: none;
       }
 
-      .ball-buttons-grid {
-        grid-template-columns: repeat(4, 1fr);
+      .form-row-2, .form-row-3, .design-grid, .cust-controls-grid {
+        grid-template-columns: 1fr;
       }
 
-      .form-row-2, .form-row-3, .design-grid {
+      .theme-preset-grid {
         grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .sponsor-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .sponsor-toolbar button {
+        width: 100%;
+        min-height: 42px;
       }
     }
 
     @media (max-width: 480px) {
+      .brand {
+        font-size: 14px;
+      }
+
       .top-actions button.hide-small {
         display: none;
       }
 
-      .ball-buttons-grid {
-        grid-template-columns: repeat(3, 1fr);
+      .nav {
+        font-size: 11.5px;
+        padding: 6px 11px;
+      }
+
+      .stream-actions-grid {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -1732,33 +1737,41 @@
     <header class="appbar">
       <div class="brand">
         <div class="ball">🏏</div>
-        <div>Cricket Live YT<small>Live Score Control Panel</small></div>
+        <div>
+          <span class="brand-title">CricLive YT</span>
+          <small class="brand-sub">Score & Broadcast Control</small>
+        </div>
       </div>
       <div class="top-actions">
-        <div class="connection">
+        <div class="connection" id="topConnectionBadge" title="CricHeroes sync status">
           <span class="dot" id="headerDot"></span>
           <span id="connectionText">Live Reader Ready</span>
         </div>
-        <button class="hide-small" onclick="openOverlay()">↗ Overlay</button>
-        <button class="primary" onclick="copyOverlayUrl()">▣ Copy OBS</button>
-        <button onclick="saveSettings()">⚙ Save</button>
+        <button class="primary" onclick="syncScorecardFromDash()" title="Sync scorecard immediately">
+          ⚡ <span class="btn-lbl">Sync</span>
+        </button>
+        <button onclick="openCameraOrOverlay()" title="Camera Broadcast Feed">
+          📷 <span class="btn-lbl">Camera</span>
+        </button>
+        <button class="hide-small" onclick="copyOverlayUrl()" title="Copy OBS overlay link">
+          ▣ <span class="btn-lbl">OBS URL</span>
+        </button>
       </div>
     </header>
 
     <div class="layout">
       <!-- SIDEBAR / TOP MOBILE TAB BAR -->
-      <aside>
-        <button class="nav active" data-page="dashboard"><span class="ico">⌂</span> <span>Dashboard</span></button>
+      <aside id="mainNav">
+        <button class="nav active" data-page="dashboard"><span class="ico">🏠</span> <span>Dashboard</span></button>
         <button class="nav" data-page="stream"><span class="ico">🔴</span> <span>Live Stream</span></button>
         <button class="nav" data-page="customization"><span class="ico">🎨</span> <span>Overlay Design</span></button>
         <button class="nav" data-page="sponsors"><span class="ico">🤝</span> <span>Sponsors</span></button>
-        <button class="nav" data-page="scorecard"><span class="ico">🔗</span> <span>Scorecard Link</span></button>
-        <button class="nav" data-page="match"><span class="ico">↗</span> <span>Match Setup</span></button>
-        <button class="nav" data-page="obs"><span class="ico">▱</span> <span>OBS Integration</span></button>
-        <button class="nav" data-page="data"><span class="ico">▤</span> <span>Diagnostics</span></button>
+        <button class="nav" data-page="match"><span class="ico">⚙️</span> <span>Match Setup</span></button>
+        <button class="nav" data-page="obs"><span class="ico">📡</span> <span>OBS & Tools</span></button>
+        <button class="nav nav-all" data-page="all"><span class="ico">📑</span> <span>All Views</span></button>
         <div class="aside-bottom">
           <div class="good">● Overlay Ready</div>
-          <div>OBS Studio 1920×1080</div>
+          <div>CricHeroes Live Sync</div>
           <div style="margin-top:6px;color:#cbd5e1">Two-way sync: edits reflect on overlay instantly.</div>
         </div>
       </aside>
@@ -1919,99 +1932,16 @@
                   </div>
                 </div>
 
-                <!-- 3. MOBILE QUICK-BALL SCORING CONTROLS -->
-                <div class="quick-scoring-bar">
-                  <div class="quick-scoring-label">
-                    <span>⚡ Mobile Quick Ball Scoring</span>
-                    <span style="font-size:10px;color:#38bdf8">Syncs with overlay immediately</span>
+                <!-- AUTOMATED CRICHEROES LIVE SYNC STATUS -->
+                <div class="dash-auto-sync-status">
+                  <div class="sync-status-icon">⚡</div>
+                  <div class="sync-status-info">
+                    <strong>Automated CricHeroes Live Reader Active</strong>
+                    <span>Scores, overs, wickets, striker/non-striker batters, and bowling figures update in real-time directly from your scorecard URL.</span>
                   </div>
-                  <div class="ball-buttons-grid">
-                    <button class="ball-btn" onclick="quickBall('0')">• Dot</button>
-                    <button class="ball-btn" onclick="quickBall('1')">+1</button>
-                    <button class="ball-btn" onclick="quickBall('2')">+2</button>
-                    <button class="ball-btn" onclick="quickBall('3')">+3</button>
-                    <button class="ball-btn four" onclick="quickBall('4')">4 Four</button>
-                    <button class="ball-btn six" onclick="quickBall('6')">6 Six</button>
-                    <button class="ball-btn wicket" onclick="quickBall('W')">W Wkt</button>
-                    <button class="ball-btn extra" onclick="quickBall('Wd')">WD</button>
-                    <button class="ball-btn extra" onclick="quickBall('Nb')">NB</button>
-                    <button class="ball-btn action" onclick="swapBatsmen()">⇄ Strike</button>
-                    <button class="ball-btn undo" onclick="undoBall()">↶ Undo</button>
-                  </div>
-                </div>
-
-                <!-- 4. MANUAL QUICK EDIT ACCORDION -->
-                <div class="quick-edit-accordion">
-                  <button class="quick-edit-toggle" id="btnToggleQuickEdit" onclick="toggleQuickEdit()">
-                    <span>✏️ Direct Manual Edit (Scores, Overs, Players)</span>
-                    <span id="quickEditArrow">▼</span>
+                  <button type="button" class="tool-btn" onclick="syncScorecardFromDash()" style="padding:6px 12px;font-size:11.5px;min-height:34px;background:rgba(8,124,255,0.2);border-color:#38bdf8;color:#fff;font-weight:700;">
+                    ↻ Sync Scorecard Now
                   </button>
-                  <div class="quick-edit-body" id="quickEditBody" style="display:none">
-                    <div class="form-row-2">
-                      <div>
-                        <label>Batting Team</label>
-                        <input id="editBattingTeam" oninput="applyManualFormEdit()">
-                      </div>
-                      <div>
-                        <label>Bowling Team</label>
-                        <input id="editBowlingTeam" oninput="applyManualFormEdit()">
-                      </div>
-                    </div>
-                    <div class="form-row-3">
-                      <div>
-                        <label>Runs</label>
-                        <input id="editRuns" type="number" oninput="applyManualFormEdit()">
-                      </div>
-                      <div>
-                        <label>Wickets</label>
-                        <input id="editWickets" type="number" oninput="applyManualFormEdit()">
-                      </div>
-                      <div>
-                        <label>Overs (e.g. 14.2)</label>
-                        <input id="editOvers" oninput="applyManualFormEdit()">
-                      </div>
-                    </div>
-                    <div class="form-row-2">
-                      <div>
-                        <label>Striker Batter (*)</label>
-                        <input id="editB1Name" placeholder="Name" oninput="applyManualFormEdit()">
-                      </div>
-                      <div>
-                        <label>Striker Runs (Balls)</label>
-                        <div style="display:flex;gap:4px">
-                          <input id="editB1Runs" type="number" placeholder="R" oninput="applyManualFormEdit()">
-                          <input id="editB1Balls" type="number" placeholder="B" oninput="applyManualFormEdit()">
-                        </div>
-                      </div>
-                    </div>
-                    <div class="form-row-2">
-                      <div>
-                        <label>Non-Striker Batter</label>
-                        <input id="editB2Name" placeholder="Name" oninput="applyManualFormEdit()">
-                      </div>
-                      <div>
-                        <label>Non-Striker Runs (Balls)</label>
-                        <div style="display:flex;gap:4px">
-                          <input id="editB2Runs" type="number" placeholder="R" oninput="applyManualFormEdit()">
-                          <input id="editB2Balls" type="number" placeholder="B" oninput="applyManualFormEdit()">
-                        </div>
-                      </div>
-                    </div>
-                    <div class="form-row-2">
-                      <div>
-                        <label>Current Bowler</label>
-                        <input id="editBowlerName" placeholder="Bowler Name" oninput="applyManualFormEdit()">
-                      </div>
-                      <div>
-                        <label>Bowler Figures (O · R · W)</label>
-                        <div style="display:flex;gap:4px">
-                          <input id="editBowlerOvers" placeholder="Overs" oninput="applyManualFormEdit()">
-                          <input id="editBowlerRuns" type="number" placeholder="Runs" oninput="applyManualFormEdit()">
-                          <input id="editBowlerWickets" type="number" placeholder="Wkts" oninput="applyManualFormEdit()">
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
               </div>
