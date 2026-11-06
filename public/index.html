@@ -1859,7 +1859,7 @@
                           <span class="equation-pill proj-pill" id="statProjected"><small>PROJ</small> <b id="oProjected">182</b></span>
                           <span class="equation-pill target-pill" id="statTarget" style="display:none"><small id="oTargetLbl">TARGET</small> <b id="oTarget">—</b></span>
                           <span class="equation-pill chase-pill" id="chaseBox" style="display:none"><span id="oTicker"></span></span>
-                          <span class="equation-pill sponsor-pill" id="oSponsorPill" style="display:none;"><small>PARTNER</small> <b id="oSponsorName"></b></span>
+                          
                         </div>
                       </div>
 
@@ -2215,10 +2215,14 @@
 
                   <!-- Row 2: Scale, Position, Layout -->
                   <div class="cust-control-item">
-                    <label>Overlay Scale</label>
-                    <div class="btn-toggle-group">
-                      <button type="button" class="toggle-choice-btn active" id="btnScale78" onclick="setCustScale('78%')">78%</button>
-                      <button type="button" class="toggle-choice-btn" id="btnScale90" onclick="setCustScale('90%')">90%</button>
+                    <label>Overlay Size (% of video width)</label>
+                    <div class="btn-toggle-group" id="scaleBtnGroup">
+                      <button type="button" class="toggle-choice-btn" data-scale="50" onclick="setCustScale('50%')">50%</button>
+                      <button type="button" class="toggle-choice-btn" data-scale="60" onclick="setCustScale('60%')">60%</button>
+                      <button type="button" class="toggle-choice-btn active" data-scale="70" onclick="setCustScale('70%')">70%</button>
+                      <button type="button" class="toggle-choice-btn" data-scale="80" onclick="setCustScale('80%')">80%</button>
+                      <button type="button" class="toggle-choice-btn" data-scale="90" onclick="setCustScale('90%')">90%</button>
+                      <button type="button" class="toggle-choice-btn" data-scale="100" onclick="setCustScale('100%')">100%</button>
                     </div>
                   </div>
                   <div class="cust-control-item">
@@ -2250,6 +2254,36 @@
                     <input type="text" id="custSponsorNames" value="ABC Motors, XYZ Sports, Dream11" placeholder="e.g. ABC Motors, XYZ Sports" oninput="updateCustText()">
                   </div>
                 </div>
+
+                <!-- EXTRA COLOURS -->
+                <div class="cust-section-title" style="margin-top:14px">More Colours</div>
+                <div class="cust-controls-grid">
+                  <div class="cust-control-item">
+                    <label>Scorebar Background</label>
+                    <div class="swatch"><input type="color" id="custBgColor" value="#070D19"></div>
+                  </div>
+                  <div class="cust-control-item">
+                    <label>Top Ribbon Background</label>
+                    <div class="swatch"><input type="color" id="custHeaderColor" value="#030710"></div>
+                  </div>
+                  <div class="cust-control-item">
+                    <label>Score Text</label>
+                    <div class="swatch"><input type="color" id="custScoreColor" value="#FFFFFF"></div>
+                  </div>
+                  <div class="cust-control-item">
+                    <label>Team &amp; Player Names</label>
+                    <div class="swatch"><input type="color" id="custNameColor" value="#FFFFFF"></div>
+                  </div>
+                  <div class="cust-control-item">
+                    <label>Tournament Title</label>
+                    <div class="swatch"><input type="color" id="custTitleColor" value="#FFC107"></div>
+                  </div>
+                  <div class="cust-control-item">
+                    <label>&nbsp;</label>
+                    <button type="button" onclick="resetCustColors()">↺ Reset Colours</button>
+                  </div>
+                </div>
+                <p class="muted" style="font-size:11px;margin-top:6px">Show / hide individual overlay elements in <b>Display Options</b> below — changes apply live.</p>
 
                 <!-- APPLY TO LIVE BROADCAST BUTTON -->
                 <div style="margin-top: 16px;">
@@ -2352,12 +2386,25 @@
                 <h3>▣ Display Options</h3>
               </div>
               <div class="card-body" id="displayOptions">
+                <div class="cust-section-title">Top Ribbon</div>
+                <div class="toggle-row"><span>Top Ribbon (whole row)</span><input class="switch" data-display="header" type="checkbox" checked></div>
                 <div class="toggle-row"><span>Tournament Name</span><input class="switch" data-display="tournament" type="checkbox" checked></div>
                 <div class="toggle-row"><span>Venue & Details</span><input class="switch" data-display="venue" type="checkbox" checked></div>
+                <div class="toggle-row"><span>Sponsor</span><input class="switch" data-display="sponsor" type="checkbox" checked></div>
+                <div class="toggle-row"><span>Innings Badge</span><input class="switch" data-display="innings" type="checkbox" checked></div>
+                <div class="toggle-row"><span>LIVE Badge</span><input class="switch" data-display="live" type="checkbox" checked></div>
+                <div class="cust-section-title" style="margin-top:10px">Score Bar</div>
+                <div class="toggle-row"><span>Team Logos</span><input class="switch" data-display="logos" type="checkbox" checked></div>
+                <div class="toggle-row"><span>BATTING / BOWLING Labels</span><input class="switch" data-display="teamtags" type="checkbox" checked></div>
+                <div class="toggle-row"><span>Bowling Team (right side)</span><input class="switch" data-display="bowlingteam" type="checkbox" checked></div>
                 <div class="toggle-row"><span>Current Run Rate (CRR)</span><input class="switch" data-display="crr" type="checkbox" checked></div>
                 <div class="toggle-row"><span>Projected Score (1st Inn)</span><input class="switch" data-display="projected" type="checkbox" checked></div>
-                <div class="toggle-row"><span>Target & Equation (2nd Inn)</span><input class="switch" data-display="target" type="checkbox" checked></div>
-                <div class="toggle-row"><span>Batter Stats</span><input class="switch" data-display="batters" type="checkbox" checked></div>
+                <div class="toggle-row"><span>Target (2nd Inn)</span><input class="switch" data-display="target" type="checkbox" checked></div>
+                <div class="toggle-row"><span>Chase Equation (Need X off Y)</span><input class="switch" data-display="chase" type="checkbox" checked></div>
+                <div class="cust-section-title" style="margin-top:10px">Player Strip</div>
+                <div class="toggle-row"><span>Player Strip (whole row)</span><input class="switch" data-display="players" type="checkbox" checked></div>
+                <div class="toggle-row"><span>Batters</span><input class="switch" data-display="batters" type="checkbox" checked></div>
+                <div class="toggle-row"><span>Batter 4s / 6s / SR</span><input class="switch" data-display="batterstats" type="checkbox" checked></div>
                 <div class="toggle-row"><span>Bowler Stats</span><input class="switch" data-display="bowler" type="checkbox" checked></div>
                 <div class="toggle-row"><span>This Over Bubbles</span><input class="switch" data-display="thisover" type="checkbox" checked></div>
               </div>
@@ -3014,6 +3061,67 @@
     // =========================================================
     // SETTINGS SAVING & SERVER AUTO-SYNC
     // =========================================================
+    // Overlay settings are written by several screens; always merge so one screen
+    // never wipes another's options (colours, show/hide, size...).
+    function persistOverlaySettings(partial) {
+      let merged = {};
+      try { merged = JSON.parse(localStorage.getItem("chOverlaySettings") || "{}") || {}; } catch (_) {}
+      merged = { ...merged, ...partial };
+      try {
+        localStorage.setItem("chOverlaySettings", JSON.stringify(merged));
+        if (broadcastSyncChannel) {
+          broadcastSyncChannel.postMessage({ type: 'SETTINGS_UPDATE', payload: merged });
+        }
+      } catch (_) {}
+      return merged;
+    }
+
+    function collectDisplayOptions() {
+      const opts = {};
+      document.querySelectorAll("[data-display]").forEach(el => {
+        opts[el.dataset.display] = el.checked;
+      });
+      return opts;
+    }
+
+    function applyDisplayOptionsLive() {
+      const displayOptions = collectDisplayOptions();
+      persistOverlaySettings({ displayOptions });
+      fetch("/api/overlay-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify({ displayOptions })
+      }).catch(() => {});
+      toast("Overlay display updated.");
+    }
+
+    // Called by the Android app each time the phone's 4G CricHeroes reader syncs a score.
+    window.applyMobileSync = function (state) {
+      if (!state || typeof state !== "object") return;
+      const d = { ...state };
+      delete d.overlaySettings;
+      // Keep operator branding; CricHeroes data only drives the live score.
+      const tour = $("matchTitle")?.value.trim();
+      const ven = $("venue")?.value.trim();
+      const sp = $("matchSponsors")?.value.trim();
+      if (tour) d.tournament = tour;
+      if (ven) d.venue = ven;
+      if (sp) d.sponsors = sp;
+      current = { ...current, ...d };
+      render();
+      try {
+        localStorage.setItem("chCurrentScore", JSON.stringify(current));
+        if (broadcastSyncChannel) {
+          broadcastSyncChannel.postMessage({ type: 'STATE_UPDATE', payload: current });
+        }
+      } catch (_) {}
+      if (typeof syncManualEditInputs === "function") syncManualEditInputs();
+      const t = new Date().toLocaleTimeString();
+      setText("dashSyncText", "4G Live Synced · " + t);
+      setText("syncNote", "✓ 4G synced at " + t);
+      setText("dataUpdated", t);
+    };
+
     function saveSettings() {
       const url = $("matchUrl").value.trim();
       $("dashMatchUrl").value = url;
@@ -3022,26 +3130,17 @@
         interval: $("refreshInterval").value,
         title: $("matchTitle").value,
         venue: $("venue").value,
-        theme: $("theme").value,
-        layout: $("layoutChoice").value,
-        primary: $("primaryColor").value,
-        secondary: $("secondaryColor").value,
-        opacity: $("opacity").value,
-        showLogos: $("showLogos").checked,
-        showTarget: $("showTarget").checked,
+        theme: currentCustTheme,
+        layout: (function () { try { return localStorage.getItem("overlay_size_pref") || "sonyliv"; } catch (_) { return "sonyliv"; } })(),
+        primary: $("primaryCustColor")?.value || "#087CFF",
+        secondary: $("secondaryCustColor")?.value || "#FFC107",
+        opacity: $("custOpacitySlider")?.value || "88",
+        showLogos: document.querySelector('[data-display="logos"]')?.checked !== false,
+        showTarget: true,
         innings: $("matchInnings") ? $("matchInnings").value : "auto",
         dlsTarget: $("matchDlsTarget") ? $("matchDlsTarget").value.trim() : "",
         sponsors: $("matchSponsors") ? $("matchSponsors").value.trim() : "",
-        displayOptions: {
-          tournament: $('[data-display="tournament"]')?.checked !== false,
-          venue: $('[data-display="venue"]')?.checked !== false,
-          crr: $('[data-display="crr"]')?.checked !== false,
-          projected: $('[data-display="projected"]')?.checked !== false,
-          target: $('[data-display="target"]')?.checked !== false,
-          batters: $('[data-display="batters"]')?.checked !== false,
-          bowler: $('[data-display="bowler"]')?.checked !== false,
-          thisover: $('[data-display="thisover"]')?.checked !== false
-        }
+        displayOptions: collectDisplayOptions()
       };
 
       if (settings.dlsTarget) {
@@ -3058,12 +3157,13 @@
       current.tournament = settings.title;
       current.venue = settings.venue;
 
+      // tournament/venue keys are what the overlay reads to protect branding from synced data
+      settings.tournament = settings.title;
+      persistOverlaySettings(settings);
       try {
-        localStorage.setItem("chOverlaySettings", JSON.stringify(settings));
         localStorage.setItem("chCurrentScore", JSON.stringify(current));
         localStorage.setItem("overlay_size_pref", settings.layout);
         if (broadcastSyncChannel) {
-          broadcastSyncChannel.postMessage({ type: 'SETTINGS_UPDATE', payload: settings });
           broadcastSyncChannel.postMessage({ type: 'STATE_UPDATE', payload: current });
         }
       } catch (_) {}
@@ -3374,7 +3474,7 @@
     // SCREEN 8: BROADCAST OVERLAY CUSTOMIZATION
     // =========================================================
     let currentCustTheme = "bluegold";
-    let currentCustScale = "78%";
+    let currentCustScale = "70%";
     let currentCustPosition = "BOTTOM";
     let currentCustLayout = "SLIM BAR";
 
@@ -3431,10 +3531,27 @@
 
     function setCustScale(scaleVal) {
       currentCustScale = scaleVal;
-      $("btnScale78")?.classList.toggle("active", scaleVal === "78%");
-      $("btnScale90")?.classList.toggle("active", scaleVal === "90%");
-      $("chipPreviewScale").textContent = "Scale: " + scaleVal;
+      const n = parseInt(scaleVal, 10);
+      document.querySelectorAll("#scaleBtnGroup [data-scale]").forEach(b => {
+        b.classList.toggle("active", parseInt(b.dataset.scale, 10) === n);
+      });
+      if ($("chipPreviewScale")) $("chipPreviewScale").textContent = "Size: " + scaleVal;
       updateCustMiniPreview();
+    }
+
+    const DEFAULT_CUST_COLORS = {
+      custBgColor: "#070D19",
+      custHeaderColor: "#030710",
+      custScoreColor: "#FFFFFF",
+      custNameColor: "#FFFFFF",
+      custTitleColor: "#FFC107"
+    };
+
+    function resetCustColors() {
+      Object.entries(DEFAULT_CUST_COLORS).forEach(([id, v]) => { if ($(id)) $(id).value = v; });
+      // Clearing the keys switches the overlay back to its stock styling
+      persistOverlaySettings({ bgColor: "", headerColor: "", scoreColor: "", nameColor: "", titleColor: "" });
+      toast("Overlay colours reset to default.");
     }
 
     function setCustPosition(posVal) {
@@ -3472,14 +3589,16 @@
 
       const card = $("miniScoreCard");
       if (card) {
-        card.style.background = `rgba(7, 13, 25, ${op})`;
+        const hex = ($("custBgColor")?.value || "#070D19").replace("#", "");
+        const n = parseInt(hex, 16) || 0;
+        card.style.background = `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${op})`;
       }
       if ($("miniAccentLeft")) $("miniAccentLeft").style.background = primary;
       if ($("miniAccentRight")) $("miniAccentRight").style.background = secondary;
 
       const wrapper = $("custMiniBroadcast");
       if (wrapper) {
-        const sc = currentCustScale === "90%" ? 0.95 : 0.85;
+        const sc = Math.max(0.5, Math.min(1, (parseInt(currentCustScale, 10) || 70) / 100 + 0.15));
         wrapper.style.transform = `scale(${sc})`;
         wrapper.style.transformOrigin = currentCustPosition === "TOP" ? "top center" : "bottom center";
       }
@@ -3495,7 +3614,7 @@
       const primary = $("primaryCustColor").value;
       const secondary = $("secondaryCustColor").value;
       const opacity = parseInt($("custOpacitySlider").value, 10);
-      const scale = currentCustScale === "90%" ? 0.90 : 0.78;
+      const frameScale = (parseInt(currentCustScale, 10) || 70) / 100;
       const position = currentCustPosition.toLowerCase();
       const layout = currentCustLayout === "FULL" ? "normal" : "sonyliv";
       const tournament = $("custTournamentTitle").value.trim();
@@ -3517,24 +3636,30 @@
         primary: primary,
         secondary: secondary,
         opacity: opacity,
-        scale: scale,
+        frameScale: frameScale,
         position: position,
         layout: layout,
         tournament: tournament,
+        title: tournament,
         venue: venue,
         sponsors: sponsors,
         sponsorsList: sponsorsList,
-        sponsorInterval: parseInt($("spRotationInterval")?.value || "8", 10)
+        sponsorInterval: parseInt($("spRotationInterval")?.value || "8", 10),
+        bgColor: $("custBgColor")?.value || "",
+        headerColor: $("custHeaderColor")?.value || "",
+        scoreColor: $("custScoreColor")?.value || "",
+        nameColor: $("custNameColor")?.value || "",
+        titleColor: $("custTitleColor")?.value || "",
+        displayOptions: collectDisplayOptions()
       };
 
+      persistOverlaySettings(settings);
       try {
-        localStorage.setItem("chOverlaySettings", JSON.stringify(settings));
         localStorage.setItem("overlay_size_pref", layout);
-        localStorage.setItem("overlay_scale_pref", scale.toString());
+        localStorage.setItem("overlay_scale_v2", frameScale.toString());
         localStorage.setItem("overlay_pos_pref", position);
-
+        if ($("layoutChoice")) $("layoutChoice").value = layout;
         if (broadcastSyncChannel) {
-          broadcastSyncChannel.postMessage({ type: 'SETTINGS_UPDATE', payload: settings });
           broadcastSyncChannel.postMessage({ type: 'STATE_UPDATE', payload: current });
         }
       } catch (_) {}
@@ -3775,31 +3900,27 @@
       }
     }));
 
-    // Form Event Listeners
-    ["theme", "primaryColor", "secondaryColor", "opacity", "layoutChoice", "showLogos", "showTarget", "previewLayout"].forEach(id => {
-      const el = $(id);
-      if (el) {
-        el.addEventListener("input", () => {
-          if (id === "previewLayout" && $("layoutChoice")) $("layoutChoice").value = $("previewLayout").value;
-          if (id === "layoutChoice" && $("previewLayout")) $("previewLayout").value = $("layoutChoice").value;
-          applyTheme();
-          saveSettings();
-        });
-      }
-    });
+    // Form Event Listeners (guarded: several legacy fields were removed from the page)
+    if ($("previewLayout")) {
+      $("previewLayout").addEventListener("input", () => {
+        try { localStorage.setItem("overlay_size_pref", $("previewLayout").value); } catch (_) {}
+        saveSettings();
+      });
+    }
 
+    // Show / hide toggles apply to the live overlay immediately
     document.querySelectorAll("[data-display]").forEach(el => el.addEventListener("change", () => {
       render();
-      saveSettings();
+      applyDisplayOptionsLive();
     }));
 
-    $("matchTitle").addEventListener("input", () => { current.tournament = $("matchTitle").value; render(); });
-    $("venue").addEventListener("input", () => { current.venue = $("venue").value; render(); });
-    $("primaryColor").addEventListener("input", () => { $("primaryHex").value = $("primaryColor").value.toUpperCase(); applyTheme(); });
-    $("secondaryColor").addEventListener("input", () => { $("secondaryHex").value = $("secondaryColor").value.toUpperCase(); applyTheme(); });
-    $("primaryHex").addEventListener("change", () => { if (/^#[0-9a-f]{6}$/i.test($("primaryHex").value)) { $("primaryColor").value = $("primaryHex").value; applyTheme(); } });
-    $("secondaryHex").addEventListener("change", () => { if (/^#[0-9a-f]{6}$/i.test($("secondaryHex").value)) { $("secondaryColor").value = $("secondaryHex").value; applyTheme(); } });
-    $("refreshInterval").addEventListener("change", startPoll);
+    ["custBgColor", "custHeaderColor", "custScoreColor", "custNameColor", "custTitleColor"].forEach(id => {
+      if ($(id)) $(id).addEventListener("input", updateCustMiniPreview);
+    });
+
+    $("matchTitle")?.addEventListener("input", () => { current.tournament = $("matchTitle").value; render(); });
+    $("venue")?.addEventListener("input", () => { current.venue = $("venue").value; render(); });
+    $("refreshInterval")?.addEventListener("change", startPoll);
 
     function loadSaved() {
       try {
@@ -3809,23 +3930,14 @@
           $("matchUrl").value = s.url;
           $("dashMatchUrl").value = s.url;
         }
-        if (s.interval) $("refreshInterval").value = s.interval;
-        if (s.title) $("matchTitle").value = s.title;
-        if (s.venue) $("venue").value = s.venue;
-        if (s.theme) $("theme").value = s.theme;
-        if (s.layout) {
-          $("layoutChoice").value = s.layout;
-          if ($("previewLayout")) $("previewLayout").value = s.layout;
-        }
-        if (s.primary) $("primaryColor").value = s.primary;
-        if (s.secondary) $("secondaryColor").value = s.secondary;
-        if (s.opacity) $("opacity").value = s.opacity;
-        if (s.showLogos !== undefined) $("showLogos").checked = s.showLogos;
-        if (s.showTarget !== undefined) $("showTarget").checked = s.showTarget;
+        if (s.interval && $("refreshInterval")) $("refreshInterval").value = s.interval;
+        if (s.title && $("matchTitle")) $("matchTitle").value = s.title;
+        if (s.venue && $("venue")) $("venue").value = s.venue;
+        if (s.layout && $("previewLayout")) $("previewLayout").value = s.layout;
         if (s.displayOptions) {
           Object.keys(s.displayOptions).forEach(k => {
-            const el = $(`[data-display="${k}"]`);
-            if (el) el.checked = s.displayOptions[k];
+            const el = document.querySelector(`[data-display="${k}"]`);
+            if (el) el.checked = s.displayOptions[k] !== false;
           });
         }
         if (s.tournament || s.title) {
@@ -3833,6 +3945,8 @@
         }
         if (s.venue && $("custVenue")) $("custVenue").value = s.venue;
         if (s.sponsors && $("custSponsorNames")) $("custSponsorNames").value = s.sponsors;
+        // Theme first: selecting a preset overwrites the colour pickers
+        if (s.theme) selectThemePreset(s.theme);
         if (s.primary) {
           if ($("primaryCustColor")) $("primaryCustColor").value = s.primary;
           if ($("primaryCustHex")) $("primaryCustHex").value = s.primary.toUpperCase();
@@ -3845,13 +3959,13 @@
           if ($("custOpacitySlider")) $("custOpacitySlider").value = s.opacity;
           if ($("custOpacityVal")) $("custOpacityVal").textContent = s.opacity + "%";
         }
-        if (s.scale) setCustScale(s.scale >= 0.85 ? "90%" : "78%");
+        const colorMap = { bgColor: "custBgColor", headerColor: "custHeaderColor", scoreColor: "custScoreColor", nameColor: "custNameColor", titleColor: "custTitleColor" };
+        Object.entries(colorMap).forEach(([k, id]) => { if (s[k] && $(id)) $(id).value = s[k]; });
+        if (s.frameScale) setCustScale(Math.round(s.frameScale * 100) + "%");
         if (s.position) setCustPosition(s.position.toUpperCase());
         if (s.layout) setCustLayout(s.layout.toLowerCase() === "normal" || s.layout.toLowerCase() === "full" ? "FULL" : "SLIM BAR");
-        if (s.theme) selectThemePreset(s.theme);
       } catch (_) {}
     }
-
     function boot() {
       const obsUrl = getOverlayUrl();
       setText("obsUrlText", obsUrl);

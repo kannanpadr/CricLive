@@ -563,6 +563,7 @@ fun CktAppScreen(
                                     if (errorMessage == null) {
                                         connectionStatus = ConnectionStatus.CONNECTED
                                     }
+                                    view?.let { MobileSyncBus.replayLatest(it) }
                                 }
 
                                 override fun onReceivedError(
@@ -588,6 +589,7 @@ fun CktAppScreen(
                             }
 
                             webViewRef = this
+                            MobileSyncBus.register(this)
                             loadUrl(currentUrl)
                         }
                     },
@@ -1008,6 +1010,48 @@ fun PresetChip(label: String, onClick: () -> Unit) {
 }
 
 /**
+ * Delivers every 4G-synced score straight into the app's WebViews (control panel and
+ * camera overlay). Without this the score only reached the remote server, so the
+ * locally bundled pages (file://) never saw it.
+ */
+object MobileSyncBus {
+    private val handler = Handler(Looper.getMainLooper())
+    private val views = mutableListOf<java.lang.ref.WeakReference<WebView>>()
+    @Volatile var latestStateJson: String? = null
+        private set
+
+    fun register(webView: WebView) {
+        handler.post {
+            views.removeAll { it.get() == null || it.get() === webView }
+            views.add(java.lang.ref.WeakReference(webView))
+        }
+    }
+
+    fun unregister(webView: WebView) {
+        handler.post { views.removeAll { it.get() == null || it.get() === webView } }
+    }
+
+    fun publish(stateJson: String) {
+        latestStateJson = stateJson
+        handler.post {
+            views.removeAll { it.get() == null }
+            views.forEach { ref -> ref.get()?.let { push(it, stateJson) } }
+        }
+    }
+
+    /** Re-applies the last synced score after a page (re)loads. */
+    fun replayLatest(webView: WebView) {
+        latestStateJson?.let { json -> handler.post { push(webView, json) } }
+    }
+
+    private fun push(webView: WebView, json: String) {
+        try {
+            webView.evaluateJavascript("window.applyMobileSync && window.applyMobileSync($json);", null)
+        } catch (_: Exception) {}
+    }
+}
+
+/**
  * Method 1: Mobile-Assisted CricHeroes Syncer
  * Bypasses Cloudflare datacenter IP blocking by loading CricHeroes on the user's
  * Android phone with 4G/5G mobile connection, extracting live scores from the canvas/DOM,
@@ -1216,6 +1260,8 @@ class MobileCricHeroesSyncer(private val context: Context) {
                             val scoreStr = state?.optString("score") ?: ""
                             val battingTeam = state?.optString("batting_team") ?: ""
                             val overs = state?.optString("overs") ?: ""
+
+                            if (state != null) MobileSyncBus.publish(state.toString())
 
                             handler.post {
                                 val summary = if (scoreStr.isNotBlank()) "$battingTeam $scoreStr ($overs Ov)" else "Score Synced"

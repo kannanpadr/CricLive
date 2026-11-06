@@ -46,28 +46,31 @@ body.preview-backdrop {
 /* =========================================================
    OVERLAY ANCHORED CONTAINER (Low-profile & Non-obstructive)
    ========================================================= */
+/* The card is always laid out at a fixed design width (--design-w) and then scaled to
+   a fraction of the video frame (--fit-scale = frameWidth / designWidth * userScale).
+   This keeps proportions identical on phones, tablets and 1080p OBS canvases, so team
+   names / labels never get squeezed or clipped. */
 .overlay-container {
   position: fixed;
   bottom: 4px;
-  left: 0;
-  right: 0;
-  width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 0 8px;
+  left: 50%;
+  width: var(--design-w, 980px);
+  max-width: none !important;
+  margin: 0;
+  padding: 0 6px;
   box-sizing: border-box;
   z-index: 100;
   pointer-events: none;
   filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.75));
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
-  transform: scale(var(--overlay-scale, 0.74));
+  transform: translateX(-50%) scale(var(--fit-scale, 0.7));
   transform-origin: bottom center;
 }
 
 body.pos-top .overlay-container {
   bottom: auto;
   top: 4px;
-  transform: scale(var(--overlay-scale, 0.74));
+  transform: translateX(-50%) scale(var(--fit-scale, 0.7));
   transform-origin: top center;
 }
 
@@ -974,115 +977,102 @@ body.layout-compact .team-name {
 }
 
 /* =========================================================
-   MOBILE & STREAM RESPONSIVE MEDIA QUERIES
+   FULL LAYOUT — tighter, lower-profile version
    ========================================================= */
-@media (max-width: 820px) {
-  .overlay-container {
-    bottom: 6px;
-    padding: 0 6px;
-    max-width: 100%;
-  }
-
-  .main-score-bar {
-    min-height: 38px;
-    padding: 2px 4px;
-  }
-
-  .team-name {
-    font-size: 11px;
-    max-width: 90px;
-  }
-
-  .team-logo-wrap {
-    width: 22px;
-    height: 22px;
-  }
-
-  .team-logo {
-    font-size: 13px;
-  }
-
-  .hero-runs-wkts {
-    font-size: 20px;
-  }
-
-  .hero-overs {
-    font-size: 10px;
-  }
-
-  .center-score-hub {
-    min-width: 140px;
-    padding: 2px 8px;
-  }
-
-  .player-bar {
-    font-size: 9.5px;
-    padding: 3px 6px;
-    grid-template-columns: 1.2fr auto 1fr auto auto;
-  }
-
-  .p-name, .bowler-name {
-    max-width: 75px;
-  }
-
-  .p-stat {
-    display: none;
-  }
-
-  .b-bubble {
-    width: 16px;
-    height: 16px;
-    font-size: 8.5px;
-  }
+.main-score-bar {
+  grid-template-columns: minmax(170px, 1fr) auto minmax(170px, 1fr);
 }
 
-@media (max-width: 500px) {
-  .overlay-container {
-    bottom: 4px;
-    padding: 0 4px;
-  }
+body.layout-normal .card-header { min-height: 18px; padding: 1px 12px; }
+body.layout-normal .main-score-bar { min-height: 38px; padding: 1px 6px; }
+body.layout-normal .team-side { padding: 2px 10px; gap: 8px; }
+body.layout-normal .team-logo-wrap { width: 24px; height: 24px; }
+body.layout-normal .team-logo { font-size: 14px; }
+body.layout-normal .team-name { font-size: 12.5px; }
+body.layout-normal .center-score-hub { padding: 2px 12px; min-width: 170px; max-width: 520px; }
+body.layout-normal .hero-runs-wkts { font-size: 22px; }
+body.layout-normal .hero-overs { font-size: 11px; }
+body.layout-normal .equation-row { margin-top: 2px; }
+body.layout-normal .equation-pill { font-size: 9.5px; padding: 1px 6px; }
+body.layout-normal .player-bar { min-height: 26px; padding: 2px 12px; font-size: 10.5px; }
+body.layout-normal .player-entry { font-size: 10.5px; }
+body.layout-normal .b-bubble { width: 17px; height: 17px; font-size: 9px; }
 
-  .team-badge-tag, .col-lbl {
-    display: none;
-  }
+/* Equation pills wrap instead of squeezing the team names */
+.equation-row { flex-wrap: wrap; justify-content: center; row-gap: 3px; }
+.chase-pill { white-space: nowrap; }
 
-  .team-side {
-    padding: 2px 4px;
-    gap: 4px;
-  }
+/* Player strip as flex so hidden columns collapse cleanly */
+.player-bar { display: flex; align-items: center; gap: 12px; }
+.batters-col { flex: 1.35 1 0; min-width: 0; }
+.bowler-col { flex: 1.15 1 0; min-width: 0; }
+.over-col { flex: 0.95 1 0; min-width: 0; }
+body.layout-sonyliv .batters-col,
+body.layout-sonyliv .bowler-col,
+body.layout-sonyliv .over-col { flex: 0 1 auto; }
 
-  .team-name {
-    max-width: 70px;
-    font-size: 10.5px;
-  }
+/* Slim strip: keep it to one clean line */
+body.layout-sonyliv .team-name { max-width: 130px; }
+body.layout-sonyliv .p-name { max-width: 95px; }
+body.layout-sonyliv .p-stat { display: none; }
+body.layout-sonyliv #statTarget { display: none !important; } /* chase pill already says Need X off Y */
+body.layout-sonyliv .equation-row { flex-wrap: nowrap; }
+body.layout-sonyliv .bowler-row { flex-wrap: nowrap; }
+body.layout-sonyliv .bowler-figures span:nth-child(2),
+body.layout-sonyliv .bowler-figures span:nth-child(5) { display: none; }
+body.layout-sonyliv .player-bar { gap: 14px; }
 
-  .center-score-hub {
-    min-width: 110px;
-    padding: 1px 4px;
-  }
+/* Sponsor appears only in the top ribbon */
+.sponsor-pill, #oSponsorPill { display: none !important; }
 
-  .hero-runs-wkts {
-    font-size: 18px;
-  }
-
-  .hero-overs {
-    font-size: 9.5px;
-  }
-
-  .equation-pill {
-    padding: 1px 4px;
-    font-size: 8.5px;
-  }
-
-  .player-bar {
-    grid-template-columns: 1fr auto 1fr;
-    gap: 4px;
-  }
-
-  .over-col, .v-divider:nth-of-type(2) {
-    display: none;
-  }
+/* =========================================================
+   SHOW / HIDE ELEMENTS (driven by Display Options)
+   ========================================================= */
+body.hide-header .card-header,
+body.hide-tournament #oTournament,
+body.hide-tournament .hdr-trophy,
+body.hide-venue #oVenue,
+body.hide-sponsor #oSponsorSlot,
+body.hide-innings #oInningsPill,
+body.hide-live #liveBadge,
+body.hide-logos .team-logo-wrap,
+body.hide-teamtags .team-badge-tag,
+body.hide-bowlingteam #bTeamRight,
+body.hide-crr #statCrr,
+body.hide-projected #statProjected,
+body.hide-target #statTarget,
+body.hide-chase #chaseBox,
+body.hide-batterstats .p-stat,
+body.hide-bowler #bowlerBox,
+body.hide-thisover #thisOverBox,
+body.hide-players #playerStrip {
+  display: none !important;
 }
+/* Drop separators that would otherwise dangle */
+body.hide-tournament #oTournament + .hdr-sep,
+body.hide-venue #oVenue + .sponsor-slot .hdr-sep { display: none !important; }
+body.hide-bowler #bowlerBox + .v-divider,
+body.hide-thisover #bowlerBox + .v-divider { display: none !important; }
+body.hide-batters #battersBox { display: none !important; }
+body.hide-batters #battersBox + .v-divider { display: none !important; }
+body.hide-bowlingteam .main-score-bar { grid-template-columns: minmax(170px, 1fr) auto; }
+
+/* =========================================================
+   CUSTOM COLORS (set from Overlay Customization)
+   ========================================================= */
+body.custom-colors .broadcast-card { background: var(--panel-bg) !important; }
+body.custom-colors .main-score-bar,
+body.custom-colors .player-bar { background: transparent !important; }
+body.custom-colors .center-score-hub { background: rgba(0, 0, 0, 0.22) !important; }
+body.custom-colors .card-header { background: var(--header-bg) !important; }
+body.custom-colors .hero-runs-wkts { color: var(--score-color) !important; }
+body.custom-colors .team-name,
+body.custom-colors .p-name,
+body.custom-colors .striker-entry .p-name,
+body.custom-colors .bowler-name,
+body.custom-colors .p-runs { color: var(--name-color) !important; }
+body.custom-colors .hdr-title { color: var(--title-color) !important; }
+body.custom-colors .hero-overs { color: var(--blue) !important; }
 
 /* =========================================================
    EVENT POP-UP BANNERS (4, 6, Wicket, Milestone)
@@ -1266,9 +1256,7 @@ body.layout-compact .team-name {
           <span class="equation-pill crr-pill" id="statCrr"><small>CRR</small> <b id="oCrr">4.90</b></span>
           <span class="equation-pill proj-pill" id="statProjected"><small>PROJ</small> <b id="oProjected">182</b></span>
           <span class="equation-pill target-pill" id="statTarget" style="display:none"><small id="oTargetLbl">TARGET</small> <b id="oTarget">—</b></span>
-          <span class="equation-pill chase-pill" id="chaseBox" style="display:none"><span id="oTicker"></span></span>
-          <span class="equation-pill sponsor-pill" id="oSponsorPill" style="display:none;"><img id="oSponsorPillLogo" class="sponsor-logo-img" style="display:none;" alt="Sponsor Logo"><small class="sponsor-category-tag" id="oSponsorPillCat">PARTNER</small> <b id="oSponsorName"></b></span>
-        </div>
+          <span class="equation-pill chase-pill" id="chaseBox" style="display:none"><span id="oTicker"></span></span>        </div>
       </div>
 
       <!-- Right Team (Bowling) -->
@@ -1437,21 +1425,20 @@ function render(data = current) {
     setText("oTargetLbl", `TARGET (${totalOv} OV)`);
   }
 
-  // Sponsor Carousel / Marquee
-  const rawSponsors = s.sponsors || s.sponsor || "";
-  const sponsorsList = Array.isArray(rawSponsors) ? rawSponsors : (rawSponsors ? String(rawSponsors).split(",").map(x => x.trim()).filter(Boolean) : []);
-  const spPill = $("oSponsorPill");
-  const spSlot = $("oSponsorSlot");
-  if (sponsorsList.length > 0) {
-    const activeIdx = Math.floor(Date.now() / 12000) % sponsorsList.length;
-    const sponsorName = sponsorsList[activeIdx];
-    setText("oSponsorName", sponsorName);
-    setText("oSponsorText", sponsorName);
-    if (spPill) spPill.style.display = "inline-flex";
-    if (spSlot) spSlot.style.display = "inline-flex";
-  } else {
-    if (spPill) spPill.style.display = "none";
-    if (spSlot) spSlot.style.display = "none";
+  // Sponsor (top ribbon only). The rotation engine owns the slot when a sponsor list
+  // (with categories/logos) is configured; plain comma names are a fallback.
+  if (!sponsorsData || sponsorsData.length === 0) {
+    const rawSponsors = s.sponsors || s.sponsor || "";
+    const names = Array.isArray(rawSponsors)
+      ? rawSponsors.map(x => (typeof x === "string" ? x : (x && x.name) || "")).filter(Boolean)
+      : (rawSponsors ? String(rawSponsors).split(",").map(x => x.trim()).filter(Boolean) : []);
+    const spSlot = $("oSponsorSlot");
+    if (names.length > 0) {
+      setText("oSponsorText", names[Math.floor(Date.now() / 8000) % names.length]);
+      if (spSlot) spSlot.style.display = "inline-flex";
+    } else if (spSlot) {
+      spSlot.style.display = "none";
+    }
   }
 
   const isSecondInnings = (Number(s.currentInnings) === 2) || (s.currentInnings == null && Boolean(s.target && Number(s.target) > 0));
@@ -1472,7 +1459,8 @@ function render(data = current) {
 
     let chaseStr = "";
     if (s.chase) {
-      chaseStr = s.chase.replace(/need\s+/i, "Need ").replace(/runs\s+in/i, "off");
+      // Drop the team-name prefix (already shown on the left) to keep the pill short
+      chaseStr = String(s.chase).replace(/^.*?\bneeds?\s+/i, "Need ").replace(/runs\s+(in|off)/i, "off");
     } else if (s.target || s.dlsTarget) {
       chaseStr = `Need ${s.requiredRuns || '—'} off ${s.ballsRemaining || '—'}b`;
     } else {
@@ -1642,23 +1630,6 @@ function renderActiveSponsor() {
       }
     }
   }
-
-  // Pill slot in score hub
-  if (spPill) {
-    spPill.style.display = "inline-flex";
-    setText("oSponsorName", name);
-    const pillCat = $("oSponsorPillCat");
-    if (pillCat) pillCat.textContent = category;
-    const pillLogo = $("oSponsorPillLogo");
-    if (pillLogo) {
-      if (logo) {
-        pillLogo.src = logo;
-        pillLogo.style.display = "inline-block";
-      } else {
-        pillLogo.style.display = "none";
-      }
-    }
-  }
 }
 
 function startSponsorRotation() {
@@ -1674,21 +1645,39 @@ function startSponsorRotation() {
 // =========================================================
 // OVERLAY SIZE & POSITION CONTROLS
 // =========================================================
+// Each layout is designed at a fixed pixel width, then scaled to the video frame.
+const DESIGN_WIDTHS = { sonyliv: 980, hotstar: 920, mini: 920, compact: 640, normal: 860 };
+const DEFAULT_SCALE = 0.7; // overlay width as a fraction of the video frame width
+let activeLayoutKey = "sonyliv";
+let userScale = DEFAULT_SCALE;
+
+function updateFitScale() {
+  const designW = DESIGN_WIDTHS[activeLayoutKey] || 980;
+  const frameW = window.innerWidth || document.documentElement.clientWidth || designW;
+  const fit = (frameW / designW) * userScale;
+  const root = document.documentElement;
+  root.style.setProperty("--design-w", designW + "px");
+  root.style.setProperty("--fit-scale", fit.toFixed(4));
+}
+window.addEventListener("resize", updateFitScale);
+
 function setOverlaySize(size) {
   document.body.classList.remove("layout-sonyliv", "layout-hotstar", "layout-mini", "layout-compact", "layout-normal");
   const s = String(size || "sonyliv").toLowerCase();
   if (s === "hotstar") {
-    document.body.classList.add("layout-hotstar");
-  } else if (s === "mini" || s === "slim" || s === "slim bar") {
-    document.body.classList.add("layout-mini");
+    activeLayoutKey = "hotstar";
+  } else if (s === "mini" || s === "slim") {
+    activeLayoutKey = "mini";
   } else if (s === "compact") {
-    document.body.classList.add("layout-compact");
+    activeLayoutKey = "compact";
   } else if (s === "normal" || s === "full") {
-    document.body.classList.add("layout-normal");
+    activeLayoutKey = "normal";
   } else {
     // Default: SonyLIV Ultra-Slim bottom strip
-    document.body.classList.add("layout-sonyliv");
+    activeLayoutKey = "sonyliv";
   }
+  document.body.classList.add("layout-" + activeLayoutKey);
+  updateFitScale();
 
   try {
     localStorage.setItem("overlay_size_pref", s);
@@ -1696,10 +1685,11 @@ function setOverlaySize(size) {
 }
 
 function setOverlayScale(scale) {
-  let val = parseFloat(scale) || 0.78;
+  let val = parseFloat(scale) || DEFAULT_SCALE;
   if (val > 1) val = val / 100;
-  document.documentElement.style.setProperty("--overlay-scale", val.toString());
-  try { localStorage.setItem("overlay_scale_pref", val.toString()); } catch (e) {}
+  userScale = Math.max(0.3, Math.min(1, val));
+  updateFitScale();
+  try { localStorage.setItem("overlay_scale_v2", userScale.toString()); } catch (e) {}
 }
 
 function setOverlayPosition(pos) {
@@ -1758,18 +1748,36 @@ function applySettings(cfg) {
     if (accRight) accRight.style.background = secondary;
   }
 
-  if (cfg.opacity !== undefined) {
+  let op = null;
+  if (cfg.opacity !== undefined && cfg.opacity !== null && cfg.opacity !== "") {
+    op = parseFloat(cfg.opacity);
+    if (op > 1) op = op / 100;
+    op = Math.max(0.2, Math.min(1.0, op || 0.86));
     const card = $("broadcastCard");
-    if (card) {
-      let op = parseFloat(cfg.opacity);
-      if (op > 1) op = op / 100;
-      op = Math.max(0.2, Math.min(1.0, op || 0.86));
-      card.style.background = `rgba(7, 13, 25, ${op})`;
+    if (card) card.style.background = `rgba(7, 13, 25, ${op})`;
+  }
+
+  // Custom colours (background / header / score / names / title)
+  if ("bgColor" in cfg || "headerColor" in cfg || "scoreColor" in cfg || "nameColor" in cfg || "titleColor" in cfg) {
+    const custom = Boolean(cfg.bgColor || cfg.headerColor || cfg.scoreColor || cfg.nameColor || cfg.titleColor);
+    document.body.classList.toggle("custom-colors", custom);
+    if (custom) {
+      const alpha = op != null ? op : 0.9;
+      root.style.setProperty("--panel-bg", hexToRgba(cfg.bgColor || "#070d19", alpha));
+      root.style.setProperty("--header-bg", hexToRgba(cfg.headerColor || "#030710", Math.min(1, alpha + 0.05)));
+      root.style.setProperty("--score-color", cfg.scoreColor || "#ffffff");
+      root.style.setProperty("--name-color", cfg.nameColor || "#ffffff");
+      root.style.setProperty("--title-color", cfg.titleColor || secondary || "#ffc107");
     }
   }
 
-  if (cfg.scale !== undefined) {
-    setOverlayScale(cfg.scale);
+  if (cfg.displayOptions && typeof cfg.displayOptions === "object") {
+    applyDisplayOptions(cfg.displayOptions);
+  }
+
+  // frameScale = overlay width as a fraction of the video frame (legacy `scale` ignored)
+  if (cfg.frameScale !== undefined && cfg.frameScale !== null) {
+    setOverlayScale(cfg.frameScale);
   }
 
   if (cfg.position) {
@@ -1790,13 +1798,35 @@ function applySettings(cfg) {
   // Sponsors
   if (cfg.sponsorsList && Array.isArray(cfg.sponsorsList)) {
     updateSponsorsList(cfg.sponsorsList, cfg.sponsorInterval || cfg.rotationInterval);
-  } else if (cfg.sponsors) {
+  } else if (cfg.sponsors && !(function () { try { return (JSON.parse(localStorage.getItem('chSponsorsList') || '[]') || []).length > 0; } catch (_) { return false; } })()) {
+    // Plain names only when no managed sponsor list (with categories/logos) exists
     updateSponsorsList(cfg.sponsors, cfg.sponsorInterval || cfg.rotationInterval);
   }
 
-  const showLogos = cfg.showLogos !== false;
-  if ($("oLeftLogoWrap")) $("oLeftLogoWrap").style.display = showLogos ? "" : "none";
-  if ($("oRightLogoWrap")) $("oRightLogoWrap").style.display = showLogos ? "" : "none";
+  if (cfg.showLogos !== undefined && !(cfg.displayOptions && "logos" in cfg.displayOptions)) {
+    document.body.classList.toggle("hide-logos", cfg.showLogos === false);
+  }
+}
+
+// Every element the operator can show/hide. Missing keys mean "shown".
+const DISPLAY_KEYS = [
+  "header", "tournament", "venue", "sponsor", "innings", "live",
+  "logos", "teamtags", "bowlingteam",
+  "crr", "projected", "target", "chase",
+  "players", "batters", "batterstats", "bowler", "thisover"
+];
+
+function applyDisplayOptions(opts) {
+  DISPLAY_KEYS.forEach(k => {
+    document.body.classList.toggle("hide-" + k, opts[k] === false);
+  });
+}
+
+function hexToRgba(hex, alpha) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
 // =========================================================
@@ -1836,6 +1866,64 @@ function triggerBanner(type, message) {
 // =========================================================
 // REAL-TIME BROADCAST SYNC (Direct link with Control Panel Dashboard)
 // =========================================================
+let lastScoreRaw = null;
+let lastSettingsRaw = null;
+let lastSponsorsRaw = null;
+
+function readLocalOverlaySettings() {
+  try { return JSON.parse(localStorage.getItem('chOverlaySettings') || '{}') || {}; } catch (_) { return {}; }
+}
+
+function rememberScore(d) {
+  try {
+    const raw = JSON.stringify(d);
+    localStorage.setItem('chCurrentScore', raw);
+    lastScoreRaw = raw;
+  } catch (_) {}
+}
+
+// Scores synced from CricHeroes must not wipe the operator's own branding.
+function sanitizeSyncedState(state) {
+  const d = { ...state };
+  delete d.overlaySettings;
+  const local = readLocalOverlaySettings();
+  const t = local.tournament || local.title;
+  if (t) d.tournament = t;
+  if (local.venue) d.venue = local.venue;
+  if (local.sponsors) d.sponsors = local.sponsors;
+  return d;
+}
+
+// Called by the Android app every time the phone's 4G CricHeroes reader syncs a score.
+window.applyMobileSync = function (state) {
+  if (!state || typeof state !== 'object') return;
+  render(sanitizeSyncedState(state));
+  rememberScore(current);
+};
+
+// Picks up changes the control panel wrote to shared storage (works even when the
+// storage event / BroadcastChannel don't reach this WebView).
+function syncFromLocalStorage() {
+  try {
+    const sc = localStorage.getItem('chCurrentScore');
+    if (sc && sc !== lastScoreRaw) {
+      lastScoreRaw = sc;
+      const d = JSON.parse(sc);
+      if (d && (d.runs !== undefined || d.score)) render(d);
+    }
+    const st = localStorage.getItem('chOverlaySettings');
+    if (st && st !== lastSettingsRaw) {
+      lastSettingsRaw = st;
+      applySettings(JSON.parse(st));
+    }
+    const sp = localStorage.getItem('chSponsorsList');
+    if (sp && sp !== lastSponsorsRaw) {
+      lastSponsorsRaw = sp;
+      updateSponsorsList(JSON.parse(sp), localStorage.getItem('chSponsorInterval'));
+    }
+  } catch (_) {}
+}
+
 let broadcastSyncChannel = null;
 try {
   broadcastSyncChannel = new BroadcastChannel('ckt_score_sync');
@@ -1850,15 +1938,13 @@ try {
 } catch (_) {}
 
 window.addEventListener('storage', (e) => {
-  if (e.key === 'chCurrentScore' && e.newValue) {
-    try { render(JSON.parse(e.newValue)); } catch (_) {}
-  } else if (e.key === 'chOverlaySettings' && e.newValue) {
-    try { applySettings(JSON.parse(e.newValue)); } catch (_) {}
+  if (e.key === 'chCurrentScore' || e.key === 'chOverlaySettings' || e.key === 'chSponsorsList') {
+    syncFromLocalStorage();
   }
 });
 
 // =========================================================
-// POLLING (In-App CricHeroes Bridge & /api/score)
+// POLLING (Server /api/score when hosted, local storage when running in the app)
 // =========================================================
 let isPollingInProgress = false;
 
@@ -1867,19 +1953,15 @@ async function pollScore() {
   isPollingInProgress = true;
 
   const params = new URLSearchParams(location.search);
-  const customServer = params.get('server') || localStorage.getItem('server_url');
+  const customServer = params.get('server');
 
   const endpoints = [];
   if (customServer) {
     const s = customServer.replace(/\/$/, "");
     endpoints.push(`${s}/api/score`);
-    endpoints.push(`${s}/score`);
   }
-  endpoints.push('/api/score');
-  endpoints.push('/score');
-  if (location.protocol === 'file:') {
-    endpoints.push('http://localhost:3000/api/score');
-    endpoints.push('http://192.168.1.9:3000/api/score');
+  if (location.protocol !== 'file:') {
+    endpoints.push('/api/score');
   }
 
   let fetchedSuccessfully = false;
@@ -1897,24 +1979,20 @@ async function pollScore() {
         const d = await r.json();
         render(d);
         if (d.overlaySettings) applySettings(d.overlaySettings);
-        // Keep offline cache fresh with the latest valid score
-        try { localStorage.setItem('chCurrentScore', JSON.stringify(d)); } catch (_) {}
+        rememberScore(d);
         fetchedSuccessfully = true;
         break;
       }
     } catch (e) {}
   }
 
-  // Only fall back to local storage if all network endpoints failed AND we have no active score
-  if (!fetchedSuccessfully && (!current || (!current.runs && !current.score))) {
+  // Settings always come from local storage too (colours, show/hide, scale…)
+  if (!fetchedSuccessfully) {
+    syncFromLocalStorage();
+  } else {
     try {
-      const localSaved = localStorage.getItem('chCurrentScore');
-      if (localSaved) {
-        const d = JSON.parse(localSaved);
-        if (d && (d.runs !== undefined || d.score)) {
-          render(d);
-        }
-      }
+      const st = localStorage.getItem('chOverlaySettings');
+      if (st && st !== lastSettingsRaw) { lastSettingsRaw = st; applySettings(JSON.parse(st)); }
     } catch (_) {}
   }
 
@@ -1930,46 +2008,24 @@ function boot() {
     document.body.classList.add("preview-backdrop");
   }
 
-  // Restore saved scale (default 0.74 for sleek low-profile broadcast look)
-  const savedScale = parseFloat(localStorage.getItem('overlay_scale_pref') || params.get('scale') || '0.74');
+  // Overlay width as a fraction of the video frame (default 70%)
+  const savedScale = parseFloat(localStorage.getItem('overlay_scale_v2') || params.get('scale') || String(DEFAULT_SCALE));
   setOverlayScale(savedScale);
 
   // Restore saved size - prioritize user's manual selection, default to SonyLIV ultra-slim bottom bar
   const userSavedSize = localStorage.getItem('overlay_size_pref');
-  const sizeToApply = userSavedSize || params.get('size') || 'sonyliv';
-  setOverlaySize(sizeToApply, false);
+  setOverlaySize(userSavedSize || params.get('size') || 'sonyliv');
 
   if (params.get('pos') === 'top' || localStorage.getItem('overlay_pos_pref') === 'top') {
     document.body.classList.add("pos-top");
   }
 
-  // Restore saved settings & sponsors
-  try {
-    const savedSettings = localStorage.getItem('chOverlaySettings');
-    if (savedSettings) applySettings(JSON.parse(savedSettings));
-    const savedSponsors = localStorage.getItem('chSponsorsList');
-    if (savedSponsors) updateSponsorsList(JSON.parse(savedSponsors));
-  } catch (_) {}
-
-  // Initial state from cached storage or defaults on startup
-  try {
-    const localSaved = localStorage.getItem('chCurrentScore');
-    if (localSaved) {
-      const d = JSON.parse(localSaved);
-      if (d && (d.runs !== undefined || d.score)) {
-        render(d);
-      } else {
-        render(current);
-      }
-    } else {
-      render(current);
-    }
-  } catch (_) {
-    render(current);
-  }
+  render(current);
+  // Restores saved settings, sponsors and the last known score
+  syncFromLocalStorage();
 
   pollScore();
-  setInterval(pollScore, 2000);
+  setInterval(pollScore, 1500);
 }
 
 window.addEventListener("DOMContentLoaded", boot);

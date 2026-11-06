@@ -474,7 +474,12 @@ fun CameraStreamOverlayScreen(
                             override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
                                 handler?.proceed()
                             }
+
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                view?.let { MobileSyncBus.replayLatest(it) }
+                            }
                         }
+                        MobileSyncBus.register(this)
                         loadUrl(overlayUrl)
                         overlayWebView = this
                     }
