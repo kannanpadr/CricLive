@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import org.json.JSONObject
 import org.json.JSONTokener
+import android.util.Log
 import android.view.ViewGroup
 import android.view.MotionEvent
 import android.view.GestureDetector
@@ -21,6 +22,7 @@ import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -90,6 +92,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -245,6 +248,8 @@ fun CktAppScreen(
     var progress by remember { mutableFloatStateOf(0f) }
     var isLoading by remember { mutableStateOf(true) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    // Bumped when the WebView renderer dies, so Compose builds a fresh WebView
+    var webViewGeneration by remember { mutableIntStateOf(0) }
     var activeMode by remember { mutableStateOf(AppMode.CONTROL) }
     var isFullscreen by remember { mutableStateOf(false) }
 
@@ -459,6 +464,7 @@ fun CktAppScreen(
 
             // Main WebView area with Error Overlay
             Box(modifier = Modifier.fillMaxSize()) {
+                key(webViewGeneration) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { context ->
@@ -586,6 +592,21 @@ fun CktAppScreen(
                                 ) {
                                     handler?.proceed()
                                 }
+
+                                // All WebViews share one renderer process. If it is killed
+                                // (low memory) or crashes, Android kills the whole app unless
+                                // every WebView handles it — so drop this one and rebuild it.
+                                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                                    Log.w("CktApp", "Control WebView renderer gone — rebuilding")
+                                    view?.let { dead ->
+                                        MobileSyncBus.unregister(dead)
+                                        (dead.parent as? ViewGroup)?.removeView(dead)
+                                        try { dead.destroy() } catch (_: Exception) {}
+                                    }
+                                    webViewRef = null
+                                    webViewGeneration++
+                                    return true
+                                }
                             }
 
                             webViewRef = this
@@ -597,6 +618,7 @@ fun CktAppScreen(
                         webViewRef = webView
                     }
                 )
+                }
 
                 // Floating Restore Button when in fullscreen mode
                 if (isFullscreen) {
@@ -1105,10 +1127,14 @@ class MobileCricHeroesSyncer(private val context: Context) {
         onStatusChanged?.invoke("Starting 4G mobile reader...")
 
         handler.post {
-            initWebView()
-            val target = if (currentMatchUrl.endsWith("/live")) currentMatchUrl else "$currentMatchUrl/live"
-            syncWebView?.loadUrl(target)
-            startScorecardLoop()
+            try {
+                initWebView()
+                syncWebView?.loadUrl(liveUrl())
+                startScorecardLoop()
+            } catch (t: Throwable) {
+                Log.e("CktSync", "Could not start 4G reader", t)
+                onStatusChanged?.invoke("Could not start 4G reader: ${t.message}")
+            }
         }
     }
 
@@ -1147,42 +1173,73 @@ class MobileCricHeroesSyncer(private val context: Context) {
         })();
     """.trimIndent()
 
-    private fun startScorecardLoop() {
-        if (cardWebView == null) {
-            cardWebView = WebView(context).apply {
-                settings.apply {
-                    javaScriptEnabled = true
-                    domStorageEnabled = true
-                    databaseEnabled = true
-                    userAgentString = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
-                    cacheMode = WebSettings.LOAD_DEFAULT
-                }
-                webViewClient = object : WebViewClient() {
-                    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                        view?.evaluateJavascript(canvasHookJs, null)
-                    }
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        if (!isSyncing) return
-                        view?.evaluateJavascript(canvasHookJs, null)
-                        // Give the page time to render its tables, then read them
-                        handler.postDelayed({ extractFullScorecard() }, 6000)
-                    }
-                    @SuppressLint("WebViewClientOnReceivedSslError")
-                    override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
-                        handler?.proceed()
-                    }
-                }
+    /** Hidden reader WebView: no images (saves a lot of memory), same desktop-free mobile UA. */
+    private fun configureHiddenWebView(w: WebView) {
+        w.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            databaseEnabled = true
+            userAgentString = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
+            cacheMode = WebSettings.LOAD_DEFAULT
+            // Logos, photos and ads are not needed to read the score
+            loadsImagesAutomatically = false
+            blockNetworkImage = true
+        }
+    }
+
+    private fun destroyQuietly(w: WebView?) {
+        if (w == null) return
+        try { w.stopLoading() } catch (_: Throwable) {}
+        try { w.destroy() } catch (_: Throwable) {}
+    }
+
+    private var cardLoadedAt = 0L
+
+    private fun ensureCardWebView(): WebView {
+        cardWebView?.let { return it }
+        val w = WebView(context)
+        configureHiddenWebView(w)
+        w.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                if (url == null || url.startsWith("about:")) return
+                view?.evaluateJavascript(canvasHookJs, null)
+            }
+            override fun onPageFinished(view: WebView?, url: String?) {
+                if (!isSyncing || url == null || url.startsWith("about:")) return
+                view?.evaluateJavascript(canvasHookJs, null)
+                // Give the page time to render its tables, then read them
+                val loadId = System.currentTimeMillis().also { cardLoadedAt = it }
+                handler.postDelayed({ if (cardLoadedAt == loadId) extractFullScorecard() }, 6000)
+            }
+            @SuppressLint("WebViewClientOnReceivedSslError")
+            override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+                handler?.proceed()
+            }
+            // Without this, a killed/crashed renderer takes the whole app down.
+            override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                Log.w("CktSync", "Scorecard reader renderer gone — will rebuild on next cycle")
+                if (cardWebView === view) cardWebView = null
+                destroyQuietly(view)
+                return true
             }
         }
+        cardWebView = w
+        return w
+    }
+
+    private fun startScorecardLoop() {
         cardRunnable?.let { handler.removeCallbacks(it) }
         cardRunnable = object : Runnable {
             override fun run() {
                 if (!isSyncing) return
-                try { cardWebView?.loadUrl(scorecardUrl()) } catch (_: Exception) {}
+                try { ensureCardWebView().loadUrl(scorecardUrl()) } catch (t: Throwable) {
+                    Log.w("CktSync", "Scorecard reader load failed", t)
+                }
                 handler.postDelayed(this, 45_000)
             }
         }
-        handler.post(cardRunnable!!)
+        // Let the live page load first so the two heavy pages don't start together
+        handler.postDelayed(cardRunnable!!, 8_000)
     }
 
     private fun extractFullScorecard() {
@@ -1244,39 +1301,67 @@ class MobileCricHeroesSyncer(private val context: Context) {
             })()
         """.trimIndent()
 
-        cardWebView?.evaluateJavascript(js) { result ->
-            if (result == null || result == "null" || !isSyncing) return@evaluateJavascript
-            try {
-                val raw = if (result.startsWith("\"")) JSONTokener(result).nextValue().toString() else result
-                val card = JSONObject(raw)
-                val innings = card.optJSONArray("innings")
-                if (innings != null && innings.length() > 0) {
-                    card.put("fetchedAt", System.currentTimeMillis())
-                    latestFullScorecard = card
-                    publishExtras()
+        val w = cardWebView ?: return
+        try {
+            w.evaluateJavascript(js) { result ->
+                // Free the scorecard page (scripts, ads, timers) until the next read
+                try { cardWebView?.loadUrl("about:blank") } catch (_: Throwable) {}
+                if (result == null || result == "null" || !isSyncing) return@evaluateJavascript
+                try {
+                    val raw = if (result.startsWith("\"")) JSONTokener(result).nextValue().toString() else result
+                    val card = JSONObject(raw)
+                    val innings = card.optJSONArray("innings")
+                    if (innings != null && innings.length() > 0) {
+                        card.put("fetchedAt", System.currentTimeMillis())
+                        latestFullScorecard = card
+                        publishExtras()
+                    }
+                } catch (t: Throwable) {
+                    Log.w("CktSync", "Scorecard parse failed", t)
                 }
-            } catch (_: Exception) {}
+            }
+        } catch (t: Throwable) {
+            Log.w("CktSync", "Scorecard read failed", t)
         }
     }
 
     private fun publishExtras() {
-        val extras = JSONObject()
-        latestFullScorecard?.let { extras.put("fullScorecard", it) }
-        latestCommentary?.let { extras.put("commentary", it) }
-        if (extras.length() > 0) MobileSyncBus.publishExtras(extras.toString())
+        try {
+            val extras = JSONObject()
+            latestFullScorecard?.let { extras.put("fullScorecard", it) }
+            latestCommentary?.let { extras.put("commentary", it) }
+            if (extras.length() > 0) MobileSyncBus.publishExtras(extras.toString())
+        } catch (t: Throwable) {
+            Log.w("CktSync", "publishExtras failed", t)
+        }
     }
+
+    private fun liveUrl(): String =
+        if (currentMatchUrl.endsWith("/live")) currentMatchUrl else "$currentMatchUrl/live"
 
     private fun initWebView() {
         if (syncWebView != null) return
         syncWebView = WebView(context).apply {
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                databaseEnabled = true
-                userAgentString = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
-                cacheMode = WebSettings.LOAD_DEFAULT
-            }
+            configureHiddenWebView(this)
             webViewClient = object : WebViewClient() {
+                // Renderer killed/crashed: rebuild the live reader instead of crashing the app
+                override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                    Log.w("CktSync", "Live reader renderer gone — rebuilding")
+                    if (syncWebView === view) syncWebView = null
+                    destroyQuietly(view)
+                    pollRunnable?.let { handler.removeCallbacks(it) }
+                    if (isSyncing) {
+                        onStatusChanged?.invoke("Reader restarted (low memory) — resuming...")
+                        handler.postDelayed({
+                            if (isSyncing) {
+                                initWebView()
+                                syncWebView?.loadUrl(liveUrl())
+                            }
+                        }, 3000)
+                    }
+                    return true
+                }
+
                 override fun onPageFinished(view: WebView?, url: String?) {
                     if (!isSyncing) return
                     val hookJs = """
@@ -1309,7 +1394,12 @@ class MobileCricHeroesSyncer(private val context: Context) {
         pollRunnable?.let { handler.removeCallbacks(it) }
         pollRunnable = Runnable {
             if (!isSyncing) return@Runnable
-            extractAndPostScore()
+            try {
+                extractAndPostScore()
+            } catch (t: Throwable) {
+                Log.w("CktSync", "Live read failed — retrying", t)
+                scheduleExtraction(6000)
+            }
         }
         handler.postDelayed(pollRunnable!!, delayMs)
     }
@@ -1465,7 +1555,8 @@ class MobileCricHeroesSyncer(private val context: Context) {
                                 onStatusChanged?.invoke("Server response HTTP $code")
                             }
                         }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
+                        // Throwable, not Exception: an Error on this thread would kill the app
                         handler.post {
                             onStatusChanged?.invoke("Syncing... (${e.message ?: "network retry"})")
                         }

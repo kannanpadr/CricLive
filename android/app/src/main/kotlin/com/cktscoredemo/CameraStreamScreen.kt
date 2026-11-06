@@ -23,6 +23,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -73,6 +74,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -207,6 +209,8 @@ fun CameraStreamOverlayScreen(
     }
     var surfaceReady by remember { mutableStateOf(false) }
     var overlayWebView by remember { mutableStateOf<WebView?>(null) }
+    // Bumped when the WebView renderer dies, so Compose builds a fresh overlay WebView
+    var overlayGeneration by remember { mutableIntStateOf(0) }
 
     var currentZoom by remember { mutableFloatStateOf(1f) }
     var zoomMin by remember { mutableFloatStateOf(1f) }
@@ -440,6 +444,7 @@ fun CameraStreamOverlayScreen(
         ) {
             // Scoreboard source. It sits *under* the camera surface, so it is never shown directly;
             // it is snapshotted and composited into the video so preview == broadcast.
+            key(overlayGeneration) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
@@ -480,6 +485,19 @@ fun CameraStreamOverlayScreen(
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 view?.let { MobileSyncBus.replayLatest(it) }
                             }
+
+                            // Shared renderer died (usually low memory). Handling it keeps the
+                            // app and the stream alive; the overlay is rebuilt and resyncs.
+                            override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                                view?.let { dead ->
+                                    MobileSyncBus.unregister(dead)
+                                    if (overlayWebView === dead) overlayWebView = null
+                                    (dead.parent as? ViewGroup)?.removeView(dead)
+                                    try { dead.destroy() } catch (_: Exception) {}
+                                }
+                                overlayGeneration++
+                                return true
+                            }
                         }
                         MobileSyncBus.register(this)
                         loadUrl(overlayUrl)
@@ -487,6 +505,7 @@ fun CameraStreamOverlayScreen(
                     }
                 }
             )
+            }
 
             // Camera + composited scoreboard, rendered by the encoder's GL pipeline.
             AndroidView(
