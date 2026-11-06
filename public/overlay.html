@@ -1342,6 +1342,160 @@ body.custom-colors .hero-overs { color: var(--blue) !important; }
   opacity: 0.85;
   margin-right: 2px;
 }
+
+/* =========================================================
+   EVENT GRAPHICS — FOUR / SIX / WICKET / MILESTONE
+   Sized in vw so they scale with the video frame.
+   ========================================================= */
+.fx-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fx {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 64vw;
+  transform: translate(-50%, -50%);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.fx-flash {
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  animation: fxFlash 0.9s ease-out forwards;
+}
+.fx-four .fx-flash { background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.0) 40%, rgba(16, 185, 129, 0.35) 100%); }
+.fx-six .fx-flash { background: radial-gradient(ellipse at center, rgba(255, 193, 7, 0.0) 35%, rgba(255, 170, 0, 0.45) 100%); }
+.fx-wicket .fx-flash { background: radial-gradient(ellipse at center, rgba(225, 29, 72, 0.0) 35%, rgba(225, 29, 72, 0.55) 100%); }
+.fx-milestone .fx-flash { background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.0) 40%, rgba(56, 189, 248, 0.35) 100%); }
+
+.fx-rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70vw;
+  height: 70vw;
+  margin: -35vw 0 0 -35vw;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 214, 10, 0.32) 0deg 7deg, transparent 7deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 18%, transparent 62%);
+  mask: radial-gradient(circle, #000 18%, transparent 62%);
+  opacity: 0;
+  animation: fxRaysIn 0.5s 0.15s ease-out forwards, fxSpin 6s linear infinite;
+}
+
+.fx-band {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2.2vw;
+  height: 10.5vw;
+  padding: 0 4vw 0 3vw;
+  transform: skewX(-12deg) scaleX(0);
+  transform-origin: left center;
+  overflow: hidden;
+  border-radius: 0.6vw;
+  box-shadow: 0 1.2vw 3vw rgba(0, 0, 0, 0.6), inset 0 0 0 0.18vw rgba(255, 255, 255, 0.25);
+  animation: fxBandIn 0.42s cubic-bezier(0.2, 1.2, 0.3, 1) forwards;
+}
+.fx-four .fx-band { background: linear-gradient(100deg, #052e2b 0%, #047857 35%, #10b981 60%, var(--blue, #087cff) 100%); }
+.fx-six .fx-band { background: linear-gradient(100deg, #3b1d00 0%, #b45309 30%, #f59e0b 58%, #fde047 100%); }
+.fx-wicket .fx-band { background: linear-gradient(100deg, #1a0006 0%, #7f1d1d 35%, #e11d48 70%, #fb7185 100%); }
+.fx-milestone .fx-band { background: linear-gradient(100deg, #061a33 0%, #075985 35%, #0ea5e9 65%, var(--gold, #ffc107) 100%); }
+
+.fx-band > * { transform: skewX(12deg); }
+
+.fx-streak {
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -30%;
+  width: 18%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  animation: fxStreak 1.1s 0.35s ease-in-out 2;
+}
+
+.fx-num {
+  font-size: 9vw;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0.4vw 1.2vw rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  animation: fxPop 0.5s 0.25s cubic-bezier(0.2, 1.6, 0.4, 1) forwards;
+}
+.fx-six .fx-num { color: #1a0f00; text-shadow: 0 0 1.4vw rgba(255, 255, 255, 0.8); }
+
+.fx-icon { width: 7vw; height: 8vw; opacity: 0; animation: fxPop 0.5s 0.2s cubic-bezier(0.2, 1.6, 0.4, 1) forwards; }
+.fx-icon .bail { transform-origin: center; }
+.fx-icon .bail-l { animation: fxBailL 0.9s 0.35s ease-out forwards; }
+.fx-icon .bail-r { animation: fxBailR 0.9s 0.35s ease-out forwards; }
+
+.fx-text { display: flex; flex-direction: column; min-width: 0; }
+.fx-title {
+  font-size: 5.4vw;
+  font-weight: 900;
+  letter-spacing: 0.35vw;
+  line-height: 1;
+  color: #fff;
+  text-transform: uppercase;
+  text-shadow: 0 0.3vw 1vw rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  animation: fxSlideUp 0.4s 0.35s ease-out forwards;
+}
+.fx-six .fx-title { color: #1a0f00; text-shadow: 0 0 1vw rgba(255, 255, 255, 0.7); }
+.fx-sub {
+  margin-top: 0.5vw;
+  font-size: 1.9vw;
+  font-weight: 800;
+  letter-spacing: 0.1vw;
+  color: rgba(255, 255, 255, 0.95);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  animation: fxSlideUp 0.4s 0.5s ease-out forwards;
+}
+.fx-six .fx-sub { color: #2a1800; }
+.fx-sub2 {
+  margin-top: 0.2vw;
+  font-size: 1.4vw;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  animation: fxSlideUp 0.4s 0.62s ease-out forwards;
+}
+
+.fx.fx-wicket { animation: fxShake 0.45s 0.15s ease-in-out; }
+.fx.fx-out { animation: fxOut 0.38s ease-in forwards !important; }
+
+body.pos-top .fx { top: 58%; }
+body.hide-fx .fx-stage { display: none !important; }
+
+@keyframes fxFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes fxBandIn { to { transform: skewX(-12deg) scaleX(1); } }
+@keyframes fxStreak { from { left: -30%; } to { left: 120%; } }
+@keyframes fxPop { 0% { opacity: 0; transform: skewX(12deg) scale(0.2); } 100% { opacity: 1; transform: skewX(12deg) scale(1); } }
+@keyframes fxSlideUp { from { opacity: 0; transform: skewX(12deg) translateY(1.2vw); } to { opacity: 1; transform: skewX(12deg) translateY(0); } }
+@keyframes fxRaysIn { to { opacity: 1; } }
+@keyframes fxSpin { to { transform: rotate(360deg); } }
+@keyframes fxShake {
+  0%, 100% { transform: translate(-50%, -50%); }
+  20% { transform: translate(calc(-50% - 1vw), -50%); }
+  40% { transform: translate(calc(-50% + 1vw), -50%); }
+  60% { transform: translate(calc(-50% - 0.6vw), -50%); }
+  80% { transform: translate(calc(-50% + 0.6vw), -50%); }
+}
+@keyframes fxBailL { to { transform: translate(-1.6vw, -2.6vw) rotate(-70deg); opacity: 0.2; } }
+@keyframes fxBailR { to { transform: translate(1.6vw, -3vw) rotate(80deg); opacity: 0.2; } }
+@keyframes fxOut { to { opacity: 0; transform: translate(-50%, -50%) scale(0.92) translateX(6vw); } }
 </style>
 </head>
 <body class="layout-sonyliv">
@@ -1464,7 +1618,7 @@ body.custom-colors .hero-overs { color: var(--blue) !important; }
 </div>
 
 <!-- EVENT POP-UP BANNER WRAPPER -->
-<div class="event-banner-wrapper" id="eventWrapper"></div>
+<div class="fx-stage" id="eventWrapper"></div>
 
 <!-- FULL SCREEN ANNOUNCEMENT (Innings Break / Match Result) -->
 <div class="announcement-overlay" id="announcementOverlay">
@@ -1473,6 +1627,7 @@ body.custom-colors .hero-overs { color: var(--blue) !important; }
   <div class="announcement-subdetail" id="announcementSubdetail">Match proceeding</div>
 </div>
 
+<script src="js/event-fx.js"></script>
 <script>
 // =========================================================
 // CRICHEROES LIVE STATE & DEFAULTS
@@ -1698,11 +1853,8 @@ function render(data = current) {
     }
   }
 
-  // 11. Event Animation
-  if (s.activeAnimation && s.activeAnimation.timestamp > lastAnimTs) {
-    lastAnimTs = s.activeAnimation.timestamp;
-    triggerBanner(s.activeAnimation.type, s.activeAnimation.message);
-  }
+  // 11. Event graphics + sound (FOUR / SIX / WICKET / MILESTONE)
+  processEvents(s);
 }
 
 // =========================================================
@@ -1905,6 +2057,15 @@ function applySettings(cfg) {
     }
   }
 
+  // Event graphics & sound
+  if (cfg.fxGraphics !== undefined) fxCfg.graphics = cfg.fxGraphics !== false;
+  if (cfg.fxSound !== undefined) fxCfg.sound = cfg.fxSound !== false;
+  if (cfg.fxVolume !== undefined && cfg.fxVolume !== null && cfg.fxVolume !== "") {
+    let v = parseFloat(cfg.fxVolume);
+    if (v > 1) v = v / 100;
+    if (Number.isFinite(v)) { fxCfg.volume = v; if (window.EventFx) window.EventFx.setVolume(v); }
+  }
+
   if (cfg.displayOptions && typeof cfg.displayOptions === "object") {
     applyDisplayOptions(cfg.displayOptions);
   }
@@ -1964,41 +2125,179 @@ function hexToRgba(hex, alpha) {
 }
 
 // =========================================================
-// EVENT BANNERS
+// EVENT GRAPHICS + SOUND (FOUR / SIX / WICKET / MILESTONE)
+// Fired either by an explicit trigger (state.activeAnimation from manual scoring or
+// the server) or auto-detected by comparing consecutive score updates (4G sync).
 // =========================================================
-function triggerBanner(type, message) {
-  const wrapper = $("eventWrapper");
-  if (!wrapper) return;
+const fxCfg = { graphics: true, sound: true, volume: 0.8 };
+let prevSnap = null;
+let eventsArmed = false;           // ignore the first few updates after load
+setTimeout(() => { eventsArmed = true; }, 2500);
+const fxQueue = [];
+let fxBusy = false;
 
-  if (bannerTimer) clearTimeout(bannerTimer);
-
-  const t = (type || "").toUpperCase();
-  let cls = "four", title = "BOUNDARY 4!", sub = message || "FOUR!";
-
-  if (t.includes("SIX") || t === "6") {
-    cls = "six"; title = "MAXIMUM 6!"; sub = message || "SIX!";
-  } else if (t.includes("WICKET") || t === "W") {
-    cls = "wicket"; title = "WICKET!"; sub = message || "OUT!";
-  } else if (t.includes("MILESTONE") || t.includes("50") || t.includes("100")) {
-    cls = "milestone"; title = "MILESTONE!"; sub = message || "50 / 100!";
-  }
-
-  wrapper.innerHTML = `
-    <div class="event-banner ${cls}" id="currentBanner">
-      <div class="event-title">${title}</div>
-      <div class="event-subtitle">${safe(sub)}</div>
-    </div>
-  `;
-
-  bannerTimer = setTimeout(() => {
-    const b = $("currentBanner");
-    if (b) b.classList.add("banner-exit");
-    setTimeout(() => { wrapper.innerHTML = ""; }, 300);
-  }, 3500);
+function snapOf(s) {
+  const team = String(s.batting_team || s.battingTeam || "").toUpperCase();
+  let w = Number(s.wickets);
+  if (!Number.isFinite(w)) w = parseInt(String(s.score || "").split("/")[1], 10);
+  const bats = {};
+  (Array.isArray(s.batters) ? s.batters : []).forEach(b => {
+    if (!b || !b.name || b.name === "—") return;
+    bats[String(b.name).replace(/\*/g, "").trim().toUpperCase()] = {
+      name: String(b.name).replace(/\*/g, "").trim(),
+      runs: Number(b.runs) || 0,
+      balls: Number(b.balls)
+    };
+  });
+  return {
+    team,
+    innings: String(s.currentInnings ?? ""),
+    wickets: Number.isFinite(w) ? w : null,
+    bats,
+    bowler: (s.bowler && s.bowler.name) || ""
+  };
 }
 
-// =========================================================
-// REAL-TIME BROADCAST SYNC (Direct link with Control Panel Dashboard)
+function strikerOf(s) {
+  const list = Array.isArray(s.batters) ? s.batters : [];
+  return list.find(b => b && (b.striker || b.isStriker)) || list[0] || null;
+}
+
+function normalizeAnim(anim, s) {
+  const t = String(anim.type || "").toUpperCase();
+  let type = null;
+  if (t.includes("SIX") || t === "6") type = "SIX";
+  else if (t.includes("WICKET") || t === "W" || t.includes("OUT")) type = "WICKET";
+  else if (t.includes("MILESTONE") || t.includes("FIFTY") || t.includes("CENTURY")) type = "MILESTONE";
+  else if (t.includes("FOUR") || t === "4" || t.includes("BOUNDARY")) type = "FOUR";
+  if (!type) return null;
+  const st = strikerOf(s) || {};
+  return {
+    type,
+    batter: anim.batter || (type !== "WICKET" ? st.name : "") || "",
+    runs: anim.runs ?? (type !== "WICKET" ? st.runs : undefined),
+    balls: anim.balls ?? (type !== "WICKET" ? st.balls : undefined),
+    bowler: anim.bowler || (s.bowler && s.bowler.name) || "",
+    milestone: anim.milestone,
+    message: anim.message || ""
+  };
+}
+
+function processEvents(s) {
+  const snap = snapOf(s);
+  const prev = prevSnap;
+  prevSnap = snap;
+
+  let explicit = false;
+  const anim = s.activeAnimation;
+  if (anim && Number(anim.timestamp) > lastAnimTs) {
+    lastAnimTs = Number(anim.timestamp);
+    // Skip stale triggers replayed from storage after a reload
+    if (eventsArmed && Date.now() - lastAnimTs < 10000) {
+      const ev = normalizeAnim(anim, s);
+      queueEvent(ev);
+      explicit = Boolean(ev); // it already describes the boundary / wicket
+    }
+  }
+
+  if (!eventsArmed || !prev) return;
+  if (snap.team !== prev.team || snap.innings !== prev.innings) return;
+
+  const events = [];
+  if (!explicit && snap.wickets != null && prev.wickets != null && snap.wickets > prev.wickets && snap.wickets - prev.wickets <= 2) {
+    const outKey = Object.keys(prev.bats).find(k => !snap.bats[k]);
+    const ob = outKey ? prev.bats[outKey] : null;
+    events.push({ type: "WICKET", batter: ob ? ob.name : "", runs: ob ? ob.runs : undefined, balls: ob ? ob.balls : undefined, bowler: snap.bowler || prev.bowler });
+  }
+  Object.keys(snap.bats).forEach(k => {
+    const a = prev.bats[k], b = snap.bats[k];
+    if (!a) return;
+    const dr = b.runs - a.runs;
+    const db = (Number.isFinite(a.balls) && Number.isFinite(b.balls)) ? b.balls - a.balls : 1;
+    if (!explicit && (dr === 4 || dr === 6) && db === 1) {
+      events.push({ type: dr === 6 ? "SIX" : "FOUR", batter: b.name, runs: b.runs, balls: b.balls });
+    }
+    [50, 100, 150, 200].forEach(m => {
+      if (a.runs < m && b.runs >= m) events.push({ type: "MILESTONE", milestone: m, batter: b.name, runs: b.runs, balls: b.balls });
+    });
+  });
+  events.forEach(queueEvent);
+}
+
+function queueEvent(ev) {
+  if (!ev || fxQueue.length >= 3) return;
+  fxQueue.push(ev);
+  if (!fxBusy) nextEvent();
+}
+
+function nextEvent() {
+  const ev = fxQueue.shift();
+  if (!ev) { fxBusy = false; return; }
+  fxBusy = true;
+  showEvent(ev);
+  setTimeout(nextEvent, 3900);
+}
+
+const STUMPS_SVG = '<svg class="fx-icon" viewBox="0 0 70 80" aria-hidden="true"><g fill="#fff">' +
+  '<rect class="bail bail-l" x="13" y="5" width="21" height="5" rx="2" style="transform-box:fill-box"/>' +
+  '<rect class="bail bail-r" x="36" y="5" width="21" height="5" rx="2" style="transform-box:fill-box"/>' +
+  '<rect x="14" y="13" width="7" height="64" rx="3"/><rect x="31.5" y="13" width="7" height="64" rx="3"/>' +
+  '<rect x="49" y="13" width="7" height="64" rx="3"/></g></svg>';
+
+function showEvent(ev) {
+  if (fxCfg.sound && window.EventFx) window.EventFx.play(ev.type);
+  if (!fxCfg.graphics) return;
+  const stage = $("eventWrapper");
+  if (!stage) return;
+
+  const name = safe(String(ev.batter || "").toUpperCase());
+  const hasScore = ev.runs !== undefined && ev.runs !== null && ev.runs !== "";
+  const ballsTxt = Number.isFinite(Number(ev.balls)) ? ` (${Number(ev.balls)})` : "";
+  let cls, lead, title, sub = "", sub2 = "";
+
+  if (ev.type === "SIX") {
+    cls = "fx-six"; lead = '<div class="fx-num">6</div>'; title = "SIX!";
+    sub = name ? `${name}${hasScore ? " · " + ev.runs + "*" + ballsTxt : ""}` : "MAXIMUM";
+  } else if (ev.type === "WICKET") {
+    cls = "fx-wicket"; lead = STUMPS_SVG; title = "WICKET!";
+    sub = name ? `${name}${hasScore ? "  " + ev.runs + ballsTxt : ""}` : (safe(ev.message) || "OUT");
+    if (ev.bowler) sub2 = "Bowler · " + safe(String(ev.bowler).toUpperCase());
+  } else if (ev.type === "MILESTONE") {
+    const m = Number(ev.milestone) || (Number(ev.runs) >= 100 ? 100 : 50);
+    cls = "fx-milestone"; lead = `<div class="fx-num">${m}</div>`;
+    title = m === 50 ? "FIFTY!" : (m === 100 ? "CENTURY!" : m + " UP!");
+    sub = name ? `${name}${hasScore ? " · " + ev.runs + "*" + ballsTxt : ""}` : "MILESTONE";
+  } else {
+    cls = "fx-four"; lead = '<div class="fx-num">4</div>'; title = "FOUR!";
+    sub = name ? `${name}${hasScore ? " · " + ev.runs + "*" + ballsTxt : ""}` : "BOUNDARY";
+  }
+
+  const el = document.createElement("div");
+  el.className = "fx " + cls;
+  el.innerHTML =
+    '<div class="fx-flash"></div>' +
+    (cls === "fx-six" || cls === "fx-milestone" ? '<div class="fx-rays"></div>' : "") +
+    `<div class="fx-band"><div class="fx-streak"></div>${lead}` +
+    `<div class="fx-text"><div class="fx-title">${title}</div>` +
+    (sub ? `<div class="fx-sub">${sub}</div>` : "") +
+    (sub2 ? `<div class="fx-sub2">${sub2}</div>` : "") +
+    "</div></div>";
+  stage.innerHTML = "";
+  stage.appendChild(el);
+  setTimeout(() => el.classList.add("fx-out"), 3400);
+  setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3800);
+}
+
+// Backwards-compatible entry point
+function triggerBanner(type, message) {
+  queueEvent(normalizeAnim({ type, message }, current));
+}
+
+// Test hook used by the control panel ("Test FOUR / SIX / WICKET")
+window.testEventFx = function (type) {
+  const st = strikerOf(current) || {};
+  queueEvent({ type, batter: st.name || "Batter", runs: st.runs, balls: st.balls, bowler: current.bowler && current.bowler.name, milestone: 50 });
+};
 // =========================================================
 let lastScoreRaw = null;
 let lastSettingsRaw = null;
@@ -2067,6 +2366,8 @@ try {
       render(e.data.payload);
     } else if (e.data.type === 'SETTINGS_UPDATE' && e.data.payload) {
       applySettings(e.data.payload);
+    } else if (e.data.type === 'FX_TEST' && e.data.payload) {
+      window.testEventFx(e.data.payload);
     }
   };
 } catch (_) {}

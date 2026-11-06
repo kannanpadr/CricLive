@@ -455,6 +455,8 @@ fun CameraStreamOverlayScreen(
                             loadWithOverviewMode = true
                             useWideViewPort = true
                             textZoom = 100
+                            // Event stingers (FOUR / SIX / WICKET) must play without a tap
+                            mediaPlaybackRequiresUserGesture = false
                             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                             cacheMode = WebSettings.LOAD_DEFAULT
                         }

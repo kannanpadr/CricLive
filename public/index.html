@@ -2413,6 +2413,26 @@
               </div>
             </section>
 
+            <!-- EVENT GRAPHICS & SOUND CARD -->
+            <section class="card" id="fxCard">
+              <div class="card-head">
+                <h3>🎆 Event Graphics &amp; Sound</h3>
+              </div>
+              <div class="card-body">
+                <p class="muted" style="font-size:11.5px;margin:0 0 8px">Full-screen FOUR / SIX / WICKET / FIFTY / CENTURY graphics with a stadium stinger. Fires from the scoring buttons and automatically from 4G CricHeroes sync.</p>
+                <div class="toggle-row"><span>Show event graphics</span><input class="switch" id="fxGraphics" type="checkbox" checked onchange="saveFxSettings()"></div>
+                <div class="toggle-row"><span>Play stinger sound (overlay / OBS)</span><input class="switch" id="fxSound" type="checkbox" checked onchange="saveFxSettings()"></div>
+                <div class="toggle-row"><span>Also play on this control device</span><input class="switch" id="fxPlayHere" type="checkbox" onchange="saveFxSettings()"></div>
+                <div class="toggle-row"><span>Volume (<b id="fxVolumeVal">80%</b>)</span><input type="range" id="fxVolume" min="0" max="100" value="80" style="max-width:160px" oninput="saveFxSettings()"></div>
+                <div class="btnrow" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+                  <button type="button" onclick="testFx('FOUR')">▶ Test FOUR</button>
+                  <button type="button" onclick="testFx('SIX')">▶ Test SIX</button>
+                  <button type="button" onclick="testFx('WICKET')">▶ Test WICKET</button>
+                  <button type="button" onclick="testFx('MILESTONE')">▶ Test FIFTY</button>
+                </div>
+              </div>
+            </section>
+
             <!-- OBS INTEGRATION CARD -->
             <section class="card" id="obsCard">
               <div class="card-head">
@@ -2469,6 +2489,7 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="js/event-fx.js"></script>
   <script>
     const $ = id => document.getElementById(id);
 
@@ -2796,6 +2817,9 @@
 
     function quickBall(outcome) {
       pushScoreHistory();
+      const strikerBefore = current.batters?.find(x => x.striker || x.isStriker) || current.batters?.[0] || {};
+      const outBatter = { name: strikerBefore.name, runs: strikerBefore.runs || 0, balls: (strikerBefore.balls || 0) + 1 };
+      const bowlerName = current.bowler?.name || "";
       let runsToAdd = 0;
       let isExtra = false;
       let isWicket = false;
@@ -2834,6 +2858,21 @@
 
       current.score = `${current.runs}/${current.wickets}`;
       recalculateCRR();
+
+      if (outcome === '4' || outcome === '6' || outcome === 'W') {
+        const isW = outcome === 'W';
+        const st = isW ? outBatter : (current.batters?.find(x => x.name === strikerBefore.name) || strikerBefore);
+        current.activeAnimation = {
+          type: outcome === '4' ? 'FOUR' : outcome === '6' ? 'SIX' : 'WICKET',
+          timestamp: Date.now(),
+          batter: st.name || "",
+          runs: st.runs,
+          balls: st.balls,
+          bowler: bowlerName
+        };
+        playFxLocally(current.activeAnimation.type);
+      }
+
       broadcastUpdate();
       postBallToServer(outcome, runsToAdd);
       toast(`Ball: ${outcome} · Score: ${current.score}`, outcome === '4' || outcome === '6' ? 'warning' : '');
@@ -3066,6 +3105,56 @@
     // =========================================================
     // Overlay settings are written by several screens; always merge so one screen
     // never wipes another's options (colours, show/hide, size...).
+    // ---------- Event graphics & sound ----------
+    function fxSettingsFromForm() {
+      return {
+        fxGraphics: $("fxGraphics") ? $("fxGraphics").checked : true,
+        fxSound: $("fxSound") ? $("fxSound").checked : true,
+        fxVolume: $("fxVolume") ? Number($("fxVolume").value) / 100 : 0.8
+      };
+    }
+
+    // The operator hears the stinger on this device too (only when "play here" is on)
+    function playFxLocally(type) {
+      const cfg = fxSettingsFromForm();
+      if (!cfg.fxSound || !$("fxPlayHere")?.checked || !window.EventFx) return;
+      window.EventFx.setVolume(cfg.fxVolume);
+      window.EventFx.play(type);
+    }
+
+    function saveFxSettings() {
+      const cfg = fxSettingsFromForm();
+      if ($("fxVolumeVal")) $("fxVolumeVal").textContent = Math.round(cfg.fxVolume * 100) + "%";
+      try { localStorage.setItem("chFxPlayHere", $("fxPlayHere")?.checked ? "1" : "0"); } catch (_) {}
+      persistOverlaySettings(cfg);
+      fetch("/api/overlay-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify(cfg)
+      }).catch(() => {});
+    }
+
+    function testFx(type) {
+      const cfg = fxSettingsFromForm();
+      if (window.EventFx && cfg.fxSound) {
+        window.EventFx.setVolume(cfg.fxVolume);
+        window.EventFx.play(type);
+      }
+      try { broadcastSyncChannel && broadcastSyncChannel.postMessage({ type: 'FX_TEST', payload: type }); } catch (_) {}
+      toast(`Testing ${type} stinger` + (cfg.fxGraphics ? " (graphic shown on open overlays)" : ""));
+    }
+
+    function loadFxSettings() {
+      try {
+        const s = JSON.parse(localStorage.getItem("chOverlaySettings") || "{}") || {};
+        if (s.fxGraphics !== undefined && $("fxGraphics")) $("fxGraphics").checked = s.fxGraphics !== false;
+        if (s.fxSound !== undefined && $("fxSound")) $("fxSound").checked = s.fxSound !== false;
+        if (s.fxVolume !== undefined && $("fxVolume")) $("fxVolume").value = Math.round(Number(s.fxVolume) * 100);
+        if ($("fxPlayHere")) $("fxPlayHere").checked = localStorage.getItem("chFxPlayHere") === "1";
+      } catch (_) {}
+      if ($("fxVolumeVal") && $("fxVolume")) $("fxVolumeVal").textContent = $("fxVolume").value + "%";
+    }
+
     function persistOverlaySettings(partial) {
       let merged = {};
       try { merged = JSON.parse(localStorage.getItem("chOverlaySettings") || "{}") || {}; } catch (_) {}
@@ -3977,6 +4066,7 @@
       const obsUrl = getOverlayUrl();
       setText("obsUrlText", obsUrl);
       loadSaved();
+      loadFxSettings();
       loadSponsorsFromStorage();
       updateCustMiniPreview();
       render();
