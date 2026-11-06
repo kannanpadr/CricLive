@@ -412,7 +412,7 @@ app.post('/api/auto-configure', async (req, res) => {
 
 // 2b. MOBILE-ASSISTED SYNC (Bypasses Cloudflare using user's mobile 4G/5G connection)
 app.post(['/api/mobile-sync', '/api/sync-score'], (req, res) => {
-  const { url, domData, state } = req.body;
+  const { url, domData, state, fullScorecard, commentary } = req.body;
   if (!url && !domData && !state) {
     return res.status(400).json({ error: "Missing match URL, domData, or state payload" });
   }
@@ -442,6 +442,9 @@ app.post(['/api/mobile-sync', '/api/sync-score'], (req, res) => {
         sourceMode: 'mobile_sync',
         lastMobileSyncTime: Date.now()
       };
+      // Full CricHeroes scorecard + commentary read by the phone (for over-end cards / ticker)
+      if (fullScorecard && Array.isArray(fullScorecard.innings)) matchState.fullScorecard = fullScorecard;
+      if (Array.isArray(commentary) && commentary.length) matchState.commentary = commentary.slice(0, 10);
 
       recalculateStats();
       scheduleStaleCheck();

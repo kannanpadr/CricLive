@@ -1039,9 +1039,28 @@ object MobileSyncBus {
         }
     }
 
+    @Volatile var latestExtrasJson: String? = null
+        private set
+
+    /** Full CricHeroes scorecard and/or commentary: { fullScorecard, commentary }. */
+    fun publishExtras(extrasJson: String) {
+        latestExtrasJson = extrasJson
+        handler.post {
+            views.removeAll { it.get() == null }
+            views.forEach { ref -> ref.get()?.let { pushExtras(it, extrasJson) } }
+        }
+    }
+
     /** Re-applies the last synced score after a page (re)loads. */
     fun replayLatest(webView: WebView) {
         latestStateJson?.let { json -> handler.post { push(webView, json) } }
+        latestExtrasJson?.let { json -> handler.post { pushExtras(webView, json) } }
+    }
+
+    private fun pushExtras(webView: WebView, json: String) {
+        try {
+            webView.evaluateJavascript("window.applyMobileExtras && window.applyMobileExtras($json);", null)
+        } catch (_: Exception) {}
     }
 
     private fun push(webView: WebView, json: String) {
@@ -1067,6 +1086,14 @@ class MobileCricHeroesSyncer(private val context: Context) {
     var currentServerUrl: String = ""
         private set
     private var pollRunnable: Runnable? = null
+
+    // Second hidden page: the CricHeroes "Scorecard" tab (all batters with dismissals,
+    // all bowlers). Re-read every 45 s for the over-end scorecard graphics.
+    private var cardWebView: WebView? = null
+    private var cardRunnable: Runnable? = null
+    @Volatile private var latestFullScorecard: JSONObject? = null
+    @Volatile private var latestCommentary: org.json.JSONArray? = null
+
     var onStatusChanged: ((String) -> Unit)? = null
     var onScoreUpdated: ((String) -> Unit)? = null
 
@@ -1081,19 +1108,162 @@ class MobileCricHeroesSyncer(private val context: Context) {
             initWebView()
             val target = if (currentMatchUrl.endsWith("/live")) currentMatchUrl else "$currentMatchUrl/live"
             syncWebView?.loadUrl(target)
+            startScorecardLoop()
         }
     }
 
     fun stopSync() {
         isSyncing = false
         pollRunnable?.let { handler.removeCallbacks(it) }
+        cardRunnable?.let { handler.removeCallbacks(it) }
         handler.post {
             try {
                 syncWebView?.stopLoading()
                 syncWebView?.loadUrl("about:blank")
+                cardWebView?.stopLoading()
+                cardWebView?.loadUrl("about:blank")
             } catch (_: Exception) {}
         }
         onStatusChanged?.invoke("Sync stopped")
+    }
+
+    // ---------------- Full scorecard reader ----------------
+
+    private fun scorecardUrl(): String {
+        val base = currentMatchUrl.trimEnd('/')
+            .replace(Regex("/(live|scorecard|summary|commentary|analysis|teams|gallery|heroes|mvp)$", RegexOption.IGNORE_CASE), "")
+        return "$base/scorecard"
+    }
+
+    private val canvasHookJs = """
+        (function() {
+            if (window.__chHookInjected) return;
+            window.__chHookInjected = true;
+            var orig = CanvasRenderingContext2D.prototype.fillText;
+            CanvasRenderingContext2D.prototype.fillText = function(text) {
+                if (this.canvas) { this.canvas.setAttribute('data-canvas-text', String(text).trim()); }
+                return orig.apply(this, arguments);
+            };
+        })();
+    """.trimIndent()
+
+    private fun startScorecardLoop() {
+        if (cardWebView == null) {
+            cardWebView = WebView(context).apply {
+                settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    databaseEnabled = true
+                    userAgentString = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
+                    cacheMode = WebSettings.LOAD_DEFAULT
+                }
+                webViewClient = object : WebViewClient() {
+                    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                        view?.evaluateJavascript(canvasHookJs, null)
+                    }
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        if (!isSyncing) return
+                        view?.evaluateJavascript(canvasHookJs, null)
+                        // Give the page time to render its tables, then read them
+                        handler.postDelayed({ extractFullScorecard() }, 6000)
+                    }
+                    @SuppressLint("WebViewClientOnReceivedSslError")
+                    override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+                        handler?.proceed()
+                    }
+                }
+            }
+        }
+        cardRunnable?.let { handler.removeCallbacks(it) }
+        cardRunnable = object : Runnable {
+            override fun run() {
+                if (!isSyncing) return
+                try { cardWebView?.loadUrl(scorecardUrl()) } catch (_: Exception) {}
+                handler.postDelayed(this, 45_000)
+            }
+        }
+        handler.post(cardRunnable!!)
+    }
+
+    private fun extractFullScorecard() {
+        // Batting row cells: name | name | dismissal | R(canvas) | R(B)(canvas) | B | 4s | 6s | SR | Min
+        // Bowling row cells: name | O | M | R(canvas) | W | 0s | 4s | 6s | WD | NB | Eco
+        // When the canvas value is missing, runs are rebuilt from SR×B and Eco×overs.
+        val js = """
+            (function() {
+                function tx(td) { return td ? (td.innerText || '').replace(/\s+/g, ' ').trim() : ''; }
+                function cv(td) { if (!td) return ''; var c = td.querySelector('canvas'); var t = c ? c.getAttribute('data-canvas-text') : ''; return (t || '').trim(); }
+                function int(v) { var n = parseInt(v, 10); return isNaN(n) ? 0 : n; }
+                var out = { innings: [] }, cur = null;
+                var tables = document.querySelectorAll('table');
+                for (var i = 0; i < tables.length; i++) {
+                    var t = tables[i];
+                    var hr = t.querySelector('thead tr') || t.querySelector('tr');
+                    var head = hr && hr.children.length ? tx(hr.children[0]) : '';
+                    var rows = t.querySelectorAll('tbody > tr');
+                    if (/^Batters/i.test(head)) {
+                        cur = { batting: [], bowling: [], extras: '', extrasRuns: '', total: '' };
+                        out.innings.push(cur);
+                        for (var r = 0; r < rows.length; r++) {
+                            var c = rows[r].children;
+                            if (c.length < 9) continue;
+                            var name = tx(c[0]);
+                            if (/^Extras/i.test(name)) {
+                                cur.extras = tx(c[2]);
+                                cur.extrasRuns = tx(c[3]) || cv(c[3]);
+                                var nx = rows[r + 1];
+                                if (nx && nx.children.length === 1) cur.total = tx(nx.children[0]);
+                                continue;
+                            }
+                            if (/^Total/i.test(name)) continue;
+                            var balls = int(tx(c[5]));
+                            var sr = parseFloat(tx(c[8])) || 0;
+                            var runs = cv(c[3]);
+                            if (runs === '') { var rb = cv(c[4]); runs = rb ? rb.split('(')[0] : String(Math.round(sr * balls / 100)); }
+                            cur.batting.push({ name: name, dismissal: tx(c[2]), runs: int(runs), balls: balls,
+                                fours: int(tx(c[6])), sixes: int(tx(c[7])), sr: tx(c[8]) });
+                        }
+                    } else if (/^Bowlers/i.test(head) && cur) {
+                        for (var q = 0; q < rows.length; q++) {
+                            var b = rows[q].children;
+                            if (b.length < 11) continue;
+                            var overs = tx(b[1]);
+                            var eco = parseFloat(tx(b[10])) || 0;
+                            var bRuns = cv(b[3]);
+                            if (bRuns === '') {
+                                var p = overs.split('.');
+                                var bl = int(p[0]) * 6 + int(p[1] || '0');
+                                bRuns = String(Math.round(eco * bl / 6));
+                            }
+                            cur.bowling.push({ name: tx(b[0]), overs: overs, maidens: int(tx(b[2])), runs: int(bRuns),
+                                wickets: int(tx(b[4])), eco: tx(b[10]), wides: int(tx(b[8])), noballs: int(tx(b[9])) });
+                        }
+                    }
+                }
+                return JSON.stringify(out);
+            })()
+        """.trimIndent()
+
+        cardWebView?.evaluateJavascript(js) { result ->
+            if (result == null || result == "null" || !isSyncing) return@evaluateJavascript
+            try {
+                val raw = if (result.startsWith("\"")) JSONTokener(result).nextValue().toString() else result
+                val card = JSONObject(raw)
+                val innings = card.optJSONArray("innings")
+                if (innings != null && innings.length() > 0) {
+                    card.put("fetchedAt", System.currentTimeMillis())
+                    latestFullScorecard = card
+                    publishExtras()
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    private fun publishExtras() {
+        val extras = JSONObject()
+        latestFullScorecard?.let { extras.put("fullScorecard", it) }
+        latestCommentary?.let { extras.put("commentary", it) }
+        if (extras.length() > 0) MobileSyncBus.publishExtras(extras.toString())
     }
 
     private fun initWebView() {
@@ -1212,6 +1382,19 @@ class MobileCricHeroesSyncer(private val context: Context) {
                     var bt = (balls[bi].innerText || '').trim();
                     if (/^[0-6wWdnbNB]$/.test(bt)) d.recentBalls.push(bt);
                 }
+                // Ball-by-ball commentary (newest first): "3.2" line then
+                // "Bowler to Batter, 1 run AI: <sentence>"
+                d.commentary = [];
+                var lines = d.bodyText.split('\n');
+                for (var li = 0; li < lines.length - 1 && d.commentary.length < 10; li++) {
+                    var ballNo = lines[li].trim();
+                    var body = lines[li + 1].trim();
+                    if (/^\d{1,3}\.\d$/.test(ballNo) && / to .+,/.test(body)) {
+                        var parts = body.split(/\s+AI:\s+/);
+                        d.commentary.push({ ball: ballNo, text: parts[0].trim(), detail: (parts[1] || '').trim() });
+                        li++;
+                    }
+                }
                 return JSON.stringify(d);
             })()
         """.trimIndent()
@@ -1227,9 +1410,18 @@ class MobileCricHeroesSyncer(private val context: Context) {
                         }
                         val domData = JSONObject(rawJson)
 
+                        val commentary = domData.optJSONArray("commentary")
+                        if (commentary != null && commentary.length() > 0) {
+                            latestCommentary = commentary
+                            handler.post { publishExtras() }
+                        }
+
                         val payload = JSONObject().apply {
                             put("url", currentMatchUrl)
                             put("domData", domData)
+                            // Lets OBS / web overlays (served by the server) show them too
+                            latestFullScorecard?.let { put("fullScorecard", it) }
+                            if (commentary != null && commentary.length() > 0) put("commentary", commentary)
                         }
 
                         val targetEndpoint = if (currentServerUrl.startsWith("file://") || currentServerUrl.isBlank()) {

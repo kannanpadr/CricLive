@@ -1496,12 +1496,131 @@ body.hide-fx .fx-stage { display: none !important; }
 @keyframes fxBailL { to { transform: translate(-1.6vw, -2.6vw) rotate(-70deg); opacity: 0.2; } }
 @keyframes fxBailR { to { transform: translate(1.6vw, -3vw) rotate(80deg); opacity: 0.2; } }
 @keyframes fxOut { to { opacity: 0; transform: translate(-50%, -50%) scale(0.92) translateX(6vw); } }
+
+/* =========================================================
+   OVER-END SCORECARDS (batting / bowling) — sized in vw
+   ========================================================= */
+.sc-panel {
+  position: fixed;
+  left: 50%;
+  top: 4%;
+  width: 60vw;
+  transform: translateX(-50%);
+  z-index: 250;
+  pointer-events: none;
+  display: none;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #f8fafc;
+  border-radius: 0.8vw;
+  overflow: hidden;
+  background: rgba(6, 12, 24, 0.94);
+  border: 0.12vw solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 1.5vw 4vw rgba(0, 0, 0, 0.7);
+}
+body.pos-top .sc-panel { top: auto; bottom: 4%; }
+.sc-panel.show { display: block; animation: scIn 0.45s cubic-bezier(0.2, 1, 0.3, 1); }
+.sc-panel.hide { animation: scOut 0.35s ease-in forwards; }
+@keyframes scIn { from { opacity: 0; transform: translateX(-50%) translateY(2vw) scale(0.97); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
+@keyframes scOut { to { opacity: 0; transform: translateX(-50%) translateY(-1.5vw); } }
+
+.sc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5vw;
+  padding: 1vw 1.6vw;
+  background: linear-gradient(100deg, var(--blue, #087cff) 0%, rgba(8, 124, 255, 0.35) 55%, rgba(6, 12, 24, 0) 100%);
+}
+.sc-panel.bowling .sc-head { background: linear-gradient(100deg, #b45309 0%, rgba(255, 193, 7, 0.35) 55%, rgba(6, 12, 24, 0) 100%); }
+.sc-team { font-size: 1.9vw; font-weight: 900; letter-spacing: 0.1vw; text-transform: uppercase; line-height: 1.1; }
+.sc-kind { display: block; font-size: 0.95vw; font-weight: 800; letter-spacing: 0.25vw; opacity: 0.85; }
+.sc-score { font-size: 2.3vw; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sc-score small { font-size: 1.1vw; font-weight: 800; color: #7dd3fc; margin-left: 0.5vw; }
+
+.sc-table { width: 100%; border-collapse: collapse; font-size: 1.22vw; font-variant-numeric: tabular-nums; }
+.sc-table th {
+  font-size: 0.85vw;
+  font-weight: 800;
+  letter-spacing: 0.12vw;
+  color: #94a3b8;
+  text-transform: uppercase;
+  text-align: right;
+  padding: 0.55vw 0.8vw;
+  background: rgba(255, 255, 255, 0.04);
+}
+.sc-table th:first-child, .sc-table td:first-child { text-align: left; padding-left: 1.6vw; }
+.sc-table td { text-align: right; padding: 0.42vw 0.8vw; border-top: 0.07vw solid rgba(255, 255, 255, 0.06); white-space: nowrap; }
+.sc-table td.sc-name { font-weight: 800; max-width: 17vw; overflow: hidden; text-overflow: ellipsis; }
+.sc-table td.sc-how { text-align: left; color: #94a3b8; font-size: 1vw; max-width: 20vw; overflow: hidden; text-overflow: ellipsis; }
+.sc-table td.sc-r { font-weight: 900; font-size: 1.35vw; }
+.sc-table tr.notout td.sc-name, .sc-table tr.notout td.sc-r { color: #fde047; }
+.sc-table tr.notout td.sc-how { color: #fde047; opacity: 0.85; }
+.sc-table tr.current td { background: rgba(255, 193, 7, 0.1); }
+.sc-table tr.current td.sc-name { color: #fde047; }
+.sc-table td.sc-w { color: #fb7185; font-weight: 900; }
+.sc-strike { color: #38bdf8; margin-left: 0.3vw; }
+.sc-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1vw;
+  padding: 0.6vw 1.6vw;
+  font-size: 1vw;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.04);
+  border-top: 0.07vw solid rgba(255, 255, 255, 0.08);
+}
+.sc-foot b { color: #fff; }
+.sc-progress { height: 0.25vw; background: var(--gold, #ffc107); transform-origin: left; }
+.sc-panel.show .sc-progress { animation: scProgress var(--sc-dur, 7s) linear forwards; }
+@keyframes scProgress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* =========================================================
+   COMMENTARY TICKER (sits on top of the scorebar, scales with it)
+   ========================================================= */
+.overlay-container { display: flex; flex-direction: column; }
+.commentary-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  padding: 3px 10px;
+  max-width: 100%;
+  align-self: center;
+  border-radius: 6px;
+  background: rgba(4, 9, 20, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 11px;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+body.pos-top .commentary-bar { order: 2; margin: 4px 0 0; }
+.commentary-bar.show { display: flex; }
+.commentary-bar.fresh { animation: comIn 0.5s ease; }
+@keyframes comIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.com-tag {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  color: #0b1220;
+  background: var(--gold, #ffc107);
+  padding: 1px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.com-ball { font-weight: 900; color: #7dd3fc; flex-shrink: 0; }
+.com-text { font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.com-text .four { color: #34d399; }
+.com-text .six { color: #fbbf24; }
+.com-text .wkt { color: #fb7185; }
 </style>
 </head>
 <body class="layout-sonyliv">
 
 <!-- MAIN OVERLAY CONTAINER -->
 <div class="overlay-container" id="overlayContainer">
+  <div class="commentary-bar" id="commentaryBar"><span class="com-tag">🎙 LIVE</span><span class="com-ball" id="comBall"></span><span class="com-text" id="comText"></span></div>
   <div class="broadcast-card" id="broadcastCard">
 
     <!-- 1. SLENDER TOP RIBBON (Tournament & Status) -->
@@ -1620,6 +1739,9 @@ body.hide-fx .fx-stage { display: none !important; }
 <!-- EVENT POP-UP BANNER WRAPPER -->
 <div class="fx-stage" id="eventWrapper"></div>
 
+<!-- OVER-END FULL SCORECARD PANEL -->
+<div class="sc-panel" id="scPanel"></div>
+
 <!-- FULL SCREEN ANNOUNCEMENT (Innings Break / Match Result) -->
 <div class="announcement-overlay" id="announcementOverlay">
   <div class="announcement-title" id="announcementTitle">INNINGS BREAK</div>
@@ -1628,6 +1750,7 @@ body.hide-fx .fx-stage { display: none !important; }
 </div>
 
 <script src="js/event-fx.js"></script>
+<script src="js/scorecard-tracker.js"></script>
 <script>
 // =========================================================
 // CRICHEROES LIVE STATE & DEFAULTS
@@ -1855,6 +1978,11 @@ function render(data = current) {
 
   // 11. Event graphics + sound (FOUR / SIX / WICKET / MILESTONE)
   processEvents(s);
+
+  // 12. Innings card tracker, over-end scorecards, commentary ticker
+  if (window.ScoreTracker) window.ScoreTracker.ingest(s);
+  checkOverEnd(s);
+  renderCommentary(s);
 }
 
 // =========================================================
@@ -2057,6 +2185,11 @@ function applySettings(cfg) {
     }
   }
 
+  // Over-end scorecards & commentary
+  if (cfg.overEndCards !== undefined) cardCfg.overEnd = cfg.overEndCards !== false;
+  if (cfg.overEndSeconds) cardCfg.seconds = Number(cfg.overEndSeconds) || 7;
+  if (cfg.commentaryTicker !== undefined) { cardCfg.commentary = cfg.commentaryTicker !== false; renderCommentary(current); }
+
   // Event graphics & sound
   if (cfg.fxGraphics !== undefined) fxCfg.graphics = cfg.fxGraphics !== false;
   if (cfg.fxSound !== undefined) fxCfg.sound = cfg.fxSound !== false;
@@ -2235,7 +2368,7 @@ function nextEvent() {
   if (!ev) { fxBusy = false; return; }
   fxBusy = true;
   showEvent(ev);
-  setTimeout(nextEvent, 3900);
+  setTimeout(nextEvent, 4600);
 }
 
 const STUMPS_SVG = '<svg class="fx-icon" viewBox="0 0 70 80" aria-hidden="true"><g fill="#fff">' +
@@ -2288,6 +2421,150 @@ function showEvent(ev) {
   setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3800);
 }
 
+// =========================================================
+// OVER-END SCORECARDS (batting + bowling) & LIVE COMMENTARY
+// =========================================================
+const cardCfg = { overEnd: true, seconds: 7, commentary: true };
+let prevOverInt = null;
+let prevOverKey = "";
+let cardTimer = null;
+let lastComKey = "";
+
+function oversInt(s) {
+  const v = parseInt(String(s.overs ?? "").split(".")[0], 10);
+  return Number.isFinite(v) ? v : null;
+}
+
+function checkOverEnd(s) {
+  const key = String(s.batting_team || s.battingTeam || "").toUpperCase() + "|" + String(s.currentInnings ?? "");
+  const oi = oversInt(s);
+  const prev = prevOverInt, prevKey = prevOverKey;
+  prevOverInt = oi;
+  prevOverKey = key;
+  if (!cardCfg.overEnd || !eventsArmed || oi == null || prev == null || key !== prevKey) return;
+  if (oi > prev && oi - prev <= 2) scheduleOverCards();
+}
+
+function scheduleOverCards() {
+  // Let a boundary / wicket graphic finish first
+  let waited = 0;
+  const go = () => {
+    if ((fxBusy || fxQueue.length) && waited < 8000) { waited += 500; setTimeout(go, 500); return; }
+    showCardSequence(["batting", "bowling"]);
+  };
+  setTimeout(go, 600);
+}
+
+function showCardSequence(kinds) {
+  const panel = $("scPanel");
+  if (!panel || !window.ScoreTracker) return;
+  if (cardTimer) clearTimeout(cardTimer);
+  const dur = Math.max(3, Math.min(30, Number(cardCfg.seconds) || 7)) * 1000;
+  const queue = kinds.filter(k => renderCard(k));
+  const step = (i) => {
+    if (i >= queue.length) {
+      panel.classList.add("hide");
+      cardTimer = setTimeout(() => { panel.className = "sc-panel"; panel.innerHTML = ""; }, 380);
+      return;
+    }
+    panel.innerHTML = renderCard(queue[i]);
+    panel.style.setProperty("--sc-dur", dur / 1000 + "s");
+    panel.className = "sc-panel " + queue[i];
+    void panel.offsetWidth;
+    panel.classList.add("show");
+    cardTimer = setTimeout(() => step(i + 1), dur);
+  };
+  step(0);
+}
+
+function renderCard(kind) {
+  const s = current;
+  const card = window.ScoreTracker.build(s);
+  const score = (typeof s.score === "string" && s.score.includes("/")) ? s.score : `${s.runs ?? 0}/${s.wickets ?? 0}`;
+  const overs = safe(String(s.overs ?? "0.0"));
+  const batTeam = safe(String(s.batting_team || s.battingTeam || "BATTING").toUpperCase());
+  const bowlTeam = safe(String(s.bowling_team || s.bowlingTeam || "BOWLING").toUpperCase());
+  const isChase = Number(s.currentInnings) === 2 && s.target;
+  const rateTxt = isChase
+    ? `Target <b>${safe(s.target)}</b> · CRR <b>${safe(s.crr ?? "—")}</b>`
+    : `CRR <b>${safe(s.crr ?? "—")}</b>`;
+
+  if (kind === "batting") {
+    if (!card.batting.length) return "";
+    const rows = card.batting.map(b => `
+      <tr class="${b.notOut ? "notout" : ""}">
+        <td class="sc-name">${safe(b.name)}${b.notOut ? " *" : ""}${b.onStrike ? '<span class="sc-strike">▶</span>' : ""}</td>
+        <td class="sc-how">${safe(b.dismissal || "")}</td>
+        <td class="sc-r">${b.runs}</td><td>${b.balls}</td><td>${b.fours ?? 0}</td><td>${b.sixes ?? 0}</td><td>${safe(b.sr)}</td>
+      </tr>`).join("");
+    const extras = card.extrasRuns !== "" ? `Extras <b>${safe(card.extrasRuns)}</b> ${safe(card.extras)}` : "";
+    return `
+      <div class="sc-head"><div class="sc-team"><span class="sc-kind">BATTING</span>${batTeam}</div>
+        <div class="sc-score">${safe(score)}<small>(${overs} OV)</small></div></div>
+      <table class="sc-table"><thead><tr><th>Batter</th><th></th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      <div class="sc-foot"><span>${extras}</span><span>${rateTxt}</span></div>
+      <div class="sc-progress"></div>`;
+  }
+
+  if (!card.bowling.length) return "";
+  const rows = card.bowling.map(b => `
+    <tr class="${b.current ? "current" : ""}">
+      <td class="sc-name">${safe(b.name)}</td>
+      <td>${safe(b.overs ?? "0")}</td><td>${b.maidens ?? 0}</td><td>${b.runs ?? 0}</td>
+      <td class="sc-w">${b.wickets ?? 0}</td><td>${safe(b.eco || "—")}</td>
+    </tr>`).join("");
+  const over = Array.isArray(s.this_over) ? s.this_over : (Array.isArray(s.thisOver) ? s.thisOver : []);
+  const overTxt = over.length ? `This over: <b>${over.map(safe).join(" ")}</b>` : "";
+  return `
+    <div class="sc-head"><div class="sc-team"><span class="sc-kind">BOWLING</span>${bowlTeam}</div>
+      <div class="sc-score">${safe(score)}<small>(${overs} OV)</small></div></div>
+    <table class="sc-table"><thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    <div class="sc-foot"><span>${overTxt}</span><span>${rateTxt}</span></div>
+    <div class="sc-progress"></div>`;
+}
+
+function highlightCommentary(txt) {
+  return safe(txt)
+    .replace(/\b(FOUR|4 runs?)\b/gi, '<span class="four">$1</span>')
+    .replace(/\b(SIX|6 runs)\b/gi, '<span class="six">$1</span>')
+    .replace(/\b(OUT|WICKET|BOWLED|CAUGHT|LBW|RUN OUT|STUMPED)\b/gi, '<span class="wkt">$1</span>');
+}
+
+function renderCommentary(s) {
+  const bar = $("commentaryBar");
+  if (!bar) return;
+  const list = Array.isArray(s.commentary) ? s.commentary : [];
+  const item = list[0];
+  if (!cardCfg.commentary || !item || !item.text) { bar.classList.remove("show"); return; }
+  const key = (item.ball || "") + "|" + item.text;
+  setText("comBall", item.ball || "");
+  const full = item.detail ? `${item.text} — ${item.detail}` : item.text;
+  $("comText").innerHTML = highlightCommentary(full);
+  bar.classList.add("show");
+  if (key !== lastComKey) {
+    lastComKey = key;
+    bar.classList.remove("fresh");
+    void bar.offsetWidth;
+    bar.classList.add("fresh");
+  }
+}
+
+// Full CricHeroes scorecard + commentary pushed by the Android 4G reader
+window.applyMobileExtras = function (x) {
+  if (!x || typeof x !== "object") return;
+  const d = {};
+  if (x.fullScorecard && Array.isArray(x.fullScorecard.innings)) d.fullScorecard = x.fullScorecard;
+  if (Array.isArray(x.commentary) && x.commentary.length) d.commentary = x.commentary;
+  if (Object.keys(d).length) { render(d); rememberScore(current); }
+};
+
+// Manual trigger from the control panel ("Show batting / bowling card now")
+window.showScorecardNow = function (kind) {
+  showCardSequence(kind === "batting" || kind === "bowling" ? [kind] : ["batting", "bowling"]);
+};
+
 // Backwards-compatible entry point
 function triggerBanner(type, message) {
   queueEvent(normalizeAnim({ type, message }, current));
@@ -2302,6 +2579,15 @@ window.testEventFx = function (type) {
 let lastScoreRaw = null;
 let lastSettingsRaw = null;
 let lastSponsorsRaw = null;
+let lastCustomSoundsRaw = null;
+
+// Operator-uploaded audio per event (falls back to the built-in score when absent)
+function applyCustomSounds(map) {
+  if (!window.EventFx) return;
+  (window.EventFx.types || ['FOUR', 'SIX', 'WICKET', 'MILESTONE']).forEach(t => {
+    window.EventFx.setCustom(t, map && map[t] ? map[t] : null);
+  });
+}
 
 function readLocalOverlaySettings() {
   try { return JSON.parse(localStorage.getItem('chOverlaySettings') || '{}') || {}; } catch (_) { return {}; }
@@ -2349,6 +2635,11 @@ function syncFromLocalStorage() {
       lastSettingsRaw = st;
       applySettings(JSON.parse(st));
     }
+    const cs = localStorage.getItem('chFxCustomSounds') || '{}';
+    if (cs !== lastCustomSoundsRaw) {
+      lastCustomSoundsRaw = cs;
+      applyCustomSounds(JSON.parse(cs));
+    }
     const sp = localStorage.getItem('chSponsorsList');
     if (sp && sp !== lastSponsorsRaw) {
       lastSponsorsRaw = sp;
@@ -2368,12 +2659,14 @@ try {
       applySettings(e.data.payload);
     } else if (e.data.type === 'FX_TEST' && e.data.payload) {
       window.testEventFx(e.data.payload);
+    } else if (e.data.type === 'SHOW_CARD') {
+      window.showScorecardNow(e.data.payload);
     }
   };
 } catch (_) {}
 
 window.addEventListener('storage', (e) => {
-  if (e.key === 'chCurrentScore' || e.key === 'chOverlaySettings' || e.key === 'chSponsorsList') {
+  if (e.key === 'chCurrentScore' || e.key === 'chOverlaySettings' || e.key === 'chSponsorsList' || e.key === 'chFxCustomSounds') {
     syncFromLocalStorage();
   }
 });

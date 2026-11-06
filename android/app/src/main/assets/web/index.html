@@ -2424,12 +2424,29 @@
                 <div class="toggle-row"><span>Play stinger sound (overlay / OBS)</span><input class="switch" id="fxSound" type="checkbox" checked onchange="saveFxSettings()"></div>
                 <div class="toggle-row"><span>Also play on this control device</span><input class="switch" id="fxPlayHere" type="checkbox" onchange="saveFxSettings()"></div>
                 <div class="toggle-row"><span>Volume (<b id="fxVolumeVal">80%</b>)</span><input type="range" id="fxVolume" min="0" max="100" value="80" style="max-width:160px" oninput="saveFxSettings()"></div>
+                <div class="cust-section-title" style="margin-top:12px">Stinger per event</div>
+                <p class="muted" style="font-size:11px;margin:0 0 6px">Built-in original scores play by default. Upload your own MP3 / WAV / OGG (max 1.5 MB) to replace any event — use only music you have the rights to broadcast.</p>
+                <div id="fxSoundRows"></div>
+                <input type="file" id="fxSoundFile" accept="audio/*" style="display:none" onchange="handleFxSoundUpload(event)">
+              </div>
+            </section>
+
+            <!-- OVER-END SCORECARDS & COMMENTARY CARD -->
+            <section class="card" id="overCardSettings">
+              <div class="card-head">
+                <h3>📋 Over-End Scorecards &amp; Commentary</h3>
+              </div>
+              <div class="card-body">
+                <p class="muted" style="font-size:11.5px;margin:0 0 8px">At the end of every over the overlay shows the full <b>batting card</b>, then the full <b>bowling card</b>. With 4G CricHeroes sync the complete CricHeroes scorecard (with dismissals) is used; with manual scoring the card is built from the balls you score.</p>
+                <div class="toggle-row"><span>Show scorecards at end of each over</span><input class="switch" id="ocEnabled" type="checkbox" checked onchange="saveOverCardSettings()"></div>
+                <div class="toggle-row"><span>Seconds per card</span><input type="number" id="ocSeconds" min="3" max="30" value="7" style="max-width:80px" onchange="saveOverCardSettings()"></div>
+                <div class="toggle-row"><span>Live commentary ticker</span><input class="switch" id="ocCommentary" type="checkbox" checked onchange="saveOverCardSettings()"></div>
                 <div class="btnrow" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-                  <button type="button" onclick="testFx('FOUR')">▶ Test FOUR</button>
-                  <button type="button" onclick="testFx('SIX')">▶ Test SIX</button>
-                  <button type="button" onclick="testFx('WICKET')">▶ Test WICKET</button>
-                  <button type="button" onclick="testFx('MILESTONE')">▶ Test FIFTY</button>
+                  <button type="button" onclick="showCardNow('batting')">▶ Show Batting Card</button>
+                  <button type="button" onclick="showCardNow('bowling')">▶ Show Bowling Card</button>
+                  <button type="button" onclick="resetInningsCard()">↺ Reset Innings Card</button>
                 </div>
+                <div class="muted" id="ocSource" style="font-size:11px;margin-top:8px"></div>
               </div>
             </section>
 
@@ -2490,6 +2507,7 @@
   <div class="toast" id="toast"></div>
 
   <script src="js/event-fx.js"></script>
+  <script src="js/scorecard-tracker.js"></script>
   <script>
     const $ = id => document.getElementById(id);
 
@@ -2859,6 +2877,13 @@
       current.score = `${current.runs}/${current.wickets}`;
       recalculateCRR();
 
+      // Ball label like "4.3" (extras keep the previous legal ball number)
+      const ballLabel = (outcome === 'Wd' || outcome === 'Nb') ? String(current.overs || "0.0") : (function () {
+        const [o, b] = String(current.overs || "0.0").split(".");
+        return parseInt(b || "0", 10) === 0 ? `${Math.max(0, parseInt(o || "0", 10) - 1)}.6` : `${o}.${b}`;
+      })();
+      addManualCommentary(outcome, strikerBefore.name, bowlerName, ballLabel);
+
       if (outcome === '4' || outcome === '6' || outcome === 'W') {
         const isW = outcome === 'W';
         const st = isW ? outBatter : (current.batters?.find(x => x.name === strikerBefore.name) || strikerBefore);
@@ -2913,8 +2938,10 @@
       if (current.bowler) {
         current.bowler.runs = (current.bowler.runs || 0) + runs;
         if (isWkt) current.bowler.wickets = (current.bowler.wickets || 0) + 1;
-        current.bowler.overs = `${ov}.${b}`;
-        const totalBalls = (ov * 6) + b;
+        const [bo, bb] = String(current.bowler.overs || "0.0").split(".");
+        let bowlerBalls = (parseInt(bo || "0", 10) || 0) * 6 + (parseInt(bb || "0", 10) || 0) + 1;
+        current.bowler.overs = `${Math.floor(bowlerBalls / 6)}.${bowlerBalls % 6}`;
+        const totalBalls = bowlerBalls;
         if (totalBalls > 0) {
           current.bowler.eco = ((current.bowler.runs / totalBalls) * 6).toFixed(2);
           current.bowler.economy = current.bowler.eco;
@@ -2960,6 +2987,7 @@
 
     function broadcastUpdate() {
       render();
+      if (window.ScoreTracker) window.ScoreTracker.ingest(current);
       try {
         localStorage.setItem("chCurrentScore", JSON.stringify(current));
         if (broadcastSyncChannel) {
@@ -3105,6 +3133,63 @@
     // =========================================================
     // Overlay settings are written by several screens; always merge so one screen
     // never wipes another's options (colours, show/hide, size...).
+    // ---------- Over-end scorecards & commentary ----------
+    function saveOverCardSettings() {
+      const secs = Math.max(3, Math.min(30, parseInt($("ocSeconds")?.value || "7", 10) || 7));
+      if ($("ocSeconds")) $("ocSeconds").value = secs;
+      const cfg = {
+        overEndCards: $("ocEnabled") ? $("ocEnabled").checked : true,
+        overEndSeconds: secs,
+        commentaryTicker: $("ocCommentary") ? $("ocCommentary").checked : true
+      };
+      persistOverlaySettings(cfg);
+      fetch("/api/overlay-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify(cfg)
+      }).catch(() => {});
+      toast("Over-end scorecard settings saved.");
+    }
+
+    function loadOverCardSettings() {
+      try {
+        const s = JSON.parse(localStorage.getItem("chOverlaySettings") || "{}") || {};
+        if (s.overEndCards !== undefined && $("ocEnabled")) $("ocEnabled").checked = s.overEndCards !== false;
+        if (s.overEndSeconds && $("ocSeconds")) $("ocSeconds").value = s.overEndSeconds;
+        if (s.commentaryTicker !== undefined && $("ocCommentary")) $("ocCommentary").checked = s.commentaryTicker !== false;
+      } catch (_) {}
+      updateCardSourceNote();
+    }
+
+    function updateCardSourceNote() {
+      if (!$("ocSource") || !window.ScoreTracker) return;
+      const c = window.ScoreTracker.build(current);
+      $("ocSource").textContent = c.source === "cricheroes"
+        ? `Source: CricHeroes full scorecard · ${c.batting.length} batters, ${c.bowling.length} bowlers`
+        : `Source: built from scored balls · ${c.batting.length} batters, ${c.bowling.length} bowlers`;
+    }
+
+    function showCardNow(kind) {
+      try { broadcastSyncChannel && broadcastSyncChannel.postMessage({ type: 'SHOW_CARD', payload: kind }); } catch (_) {}
+      updateCardSourceNote();
+      toast(`Showing ${kind} card on open overlays.`);
+    }
+
+    function resetInningsCard() {
+      if (!confirm("Clear the locally built innings card (batters / bowlers seen so far)?")) return;
+      if (window.ScoreTracker) window.ScoreTracker.reset();
+      if (window.ScoreTracker) window.ScoreTracker.ingest(current);
+      updateCardSourceNote();
+      toast("Innings card reset.");
+    }
+
+    // Commentary line for a manually scored ball, e.g. "Karthik to Aarav, FOUR"
+    function addManualCommentary(outcome, batter, bowler, ballLabel) {
+      const what = { '0': 'no run', '1': '1 run', '2': '2 runs', '3': '3 runs', '4': 'FOUR', '6': 'SIX', 'W': 'OUT', 'Wd': 'wide', 'Nb': 'no ball' }[outcome] || outcome;
+      const text = `${bowler || "Bowler"} to ${batter || "Batter"}, ${what}`;
+      current.commentary = [{ ball: ballLabel, text }, ...(Array.isArray(current.commentary) ? current.commentary : [])].slice(0, 10);
+    }
+
     // ---------- Event graphics & sound ----------
     function fxSettingsFromForm() {
       return {
@@ -3144,7 +3229,83 @@
       toast(`Testing ${type} stinger` + (cfg.fxGraphics ? " (graphic shown on open overlays)" : ""));
     }
 
+    // ---------- Custom stinger uploads (stored on this device, shared with the overlay) ----------
+    const FX_EVENTS = [["FOUR", "Boundary (FOUR)"], ["SIX", "SIX"], ["WICKET", "Wicket"], ["MILESTONE", "Milestone (50 / 100)"]];
+    let fxUploadTarget = null;
+
+    function loadCustomSounds() {
+      try { return JSON.parse(localStorage.getItem("chFxCustomSounds") || "{}") || {}; } catch (_) { return {}; }
+    }
+
+    function applyCustomSoundsLocally() {
+      const map = loadCustomSounds();
+      if (window.EventFx) FX_EVENTS.forEach(([t]) => window.EventFx.setCustom(t, map[t] || null));
+    }
+
+    function renderFxSoundRows() {
+      const box = $("fxSoundRows");
+      if (!box) return;
+      const map = loadCustomSounds();
+      const names = (() => { try { return JSON.parse(localStorage.getItem("chFxCustomSoundNames") || "{}") || {}; } catch (_) { return {}; } })();
+      box.innerHTML = FX_EVENTS.map(([t, label]) => `
+        <div class="toggle-row" style="gap:8px;flex-wrap:wrap">
+          <span style="min-width:150px"><b>${label}</b><br><small class="muted">${map[t] ? "🎵 " + safe(names[t] || "Custom file") : "Built-in score"}</small></span>
+          <span style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" onclick="testFx('${t}')">▶ Test</button>
+            <button type="button" onclick="pickFxSound('${t}')">⬆ Upload</button>
+            ${map[t] ? `<button type="button" class="danger" onclick="removeFxSound('${t}')">✕ Use built-in</button>` : ""}
+          </span>
+        </div>`).join("");
+    }
+
+    function pickFxSound(type) {
+      fxUploadTarget = type;
+      const input = $("fxSoundFile");
+      if (input) { input.value = ""; input.click(); }
+    }
+
+    function handleFxSoundUpload(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file || !fxUploadTarget) return;
+      if (file.size > 1.5 * 1024 * 1024) { toast("Audio file is too large (max 1.5 MB). Trim it to a short stinger.", "warning"); return; }
+      const type = fxUploadTarget;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const map = loadCustomSounds();
+        map[type] = reader.result;
+        try {
+          localStorage.setItem("chFxCustomSounds", JSON.stringify(map));
+          const names = JSON.parse(localStorage.getItem("chFxCustomSoundNames") || "{}") || {};
+          names[type] = file.name;
+          localStorage.setItem("chFxCustomSoundNames", JSON.stringify(names));
+        } catch (_) {
+          toast("Not enough storage on this device for that file. Try a shorter / smaller clip.", "warning");
+          return;
+        }
+        applyCustomSoundsLocally();
+        renderFxSoundRows();
+        toast(`Custom sound set for ${type}.`);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeFxSound(type) {
+      const map = loadCustomSounds();
+      delete map[type];
+      try {
+        localStorage.setItem("chFxCustomSounds", JSON.stringify(map));
+        const names = JSON.parse(localStorage.getItem("chFxCustomSoundNames") || "{}") || {};
+        delete names[type];
+        localStorage.setItem("chFxCustomSoundNames", JSON.stringify(names));
+      } catch (_) {}
+      applyCustomSoundsLocally();
+      renderFxSoundRows();
+      toast(`${type} uses the built-in score again.`);
+    }
+
     function loadFxSettings() {
+      applyCustomSoundsLocally();
+      renderFxSoundRows();
       try {
         const s = JSON.parse(localStorage.getItem("chOverlaySettings") || "{}") || {};
         if (s.fxGraphics !== undefined && $("fxGraphics")) $("fxGraphics").checked = s.fxGraphics !== false;
@@ -3207,11 +3368,24 @@
           broadcastSyncChannel.postMessage({ type: 'STATE_UPDATE', payload: current });
         }
       } catch (_) {}
+      if (window.ScoreTracker) window.ScoreTracker.ingest(current);
       if (typeof syncManualEditInputs === "function") syncManualEditInputs();
       const t = new Date().toLocaleTimeString();
       setText("dashSyncText", "4G Live Synced · " + t);
       setText("syncNote", "✓ 4G synced at " + t);
       setText("dataUpdated", t);
+    };
+
+    // Full CricHeroes scorecard + commentary pushed by the Android 4G reader
+    window.applyMobileExtras = function (x) {
+      if (!x || typeof x !== "object") return;
+      if (x.fullScorecard && Array.isArray(x.fullScorecard.innings)) current.fullScorecard = x.fullScorecard;
+      if (Array.isArray(x.commentary) && x.commentary.length) current.commentary = x.commentary;
+      try {
+        localStorage.setItem("chCurrentScore", JSON.stringify(current));
+        if (broadcastSyncChannel) broadcastSyncChannel.postMessage({ type: 'STATE_UPDATE', payload: current });
+      } catch (_) {}
+      updateCardSourceNote();
     };
 
     function saveSettings() {
@@ -4067,6 +4241,7 @@
       setText("obsUrlText", obsUrl);
       loadSaved();
       loadFxSettings();
+      loadOverCardSettings();
       loadSponsorsFromStorage();
       updateCustMiniPreview();
       render();
