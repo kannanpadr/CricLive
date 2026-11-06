@@ -2031,8 +2031,9 @@
                 <h3>◉ Overlay Live Preview</h3>
                 <div style="display:flex;gap:7px">
                   <select id="previewLayout" style="width:auto;padding:6px 10px;min-height:34px">
-                    <option value="mini" selected>Slim Broadcast Bar</option>
-                    <option value="compact">Compact Scorebar</option>
+                    <option value="sonyliv">Slim Bar</option>
+                    <option value="mini" selected>Mini</option>
+                    <option value="compact">Compact</option>
                     <option value="normal">Full Card</option>
                   </select>
                   <button onclick="openOverlay()">↗ Open Full Screen</button>
@@ -2237,6 +2238,8 @@
                     <div class="btn-toggle-group">
                       <button type="button" class="toggle-choice-btn active" id="btnLayoutSlim" onclick="setCustLayout('SLIM BAR')">SLIM BAR</button>
                       <button type="button" class="toggle-choice-btn" id="btnLayoutFull" onclick="setCustLayout('FULL')">FULL</button>
+                      <button type="button" class="toggle-choice-btn" id="btnLayoutMini" onclick="setCustLayout('MINI')">MINI</button>
+                      <button type="button" class="toggle-choice-btn" id="btnLayoutCompact" onclick="setCustLayout('COMPACT')">COMPACT</button>
                     </div>
                   </div>
 
@@ -3566,6 +3569,8 @@
       currentCustLayout = layoutVal;
       $("btnLayoutSlim")?.classList.toggle("active", layoutVal === "SLIM BAR");
       $("btnLayoutFull")?.classList.toggle("active", layoutVal === "FULL");
+      $("btnLayoutMini")?.classList.toggle("active", layoutVal === "MINI");
+      $("btnLayoutCompact")?.classList.toggle("active", layoutVal === "COMPACT");
       $("chipPreviewLayout").textContent = "Layout: " + layoutVal;
       updateCustMiniPreview();
     }
@@ -3604,7 +3609,7 @@
       }
 
       if ($("miniStatsBar")) {
-        $("miniStatsBar").style.display = currentCustLayout === "FULL" ? "flex" : "none";
+        $("miniStatsBar").style.display = currentCustLayout === "SLIM BAR" ? "none" : "flex";
       }
 
       updateCustText();
@@ -3616,7 +3621,7 @@
       const opacity = parseInt($("custOpacitySlider").value, 10);
       const frameScale = (parseInt(currentCustScale, 10) || 70) / 100;
       const position = currentCustPosition.toLowerCase();
-      const layout = currentCustLayout === "FULL" ? "normal" : "sonyliv";
+      const layout = { "FULL": "normal", "MINI": "mini", "COMPACT": "compact" }[currentCustLayout] || "sonyliv";
       const tournament = $("custTournamentTitle").value.trim();
       const venue = $("custVenue").value.trim();
       const sponsors = $("custSponsorNames").value.trim();
@@ -3903,7 +3908,9 @@
     // Form Event Listeners (guarded: several legacy fields were removed from the page)
     if ($("previewLayout")) {
       $("previewLayout").addEventListener("input", () => {
-        try { localStorage.setItem("overlay_size_pref", $("previewLayout").value); } catch (_) {}
+        const v = $("previewLayout").value;
+        try { localStorage.setItem("overlay_size_pref", v); } catch (_) {}
+        setCustLayout({ normal: "FULL", mini: "MINI", compact: "COMPACT" }[v] || "SLIM BAR");
         saveSettings();
       });
     }
@@ -3963,7 +3970,7 @@
         Object.entries(colorMap).forEach(([k, id]) => { if (s[k] && $(id)) $(id).value = s[k]; });
         if (s.frameScale) setCustScale(Math.round(s.frameScale * 100) + "%");
         if (s.position) setCustPosition(s.position.toUpperCase());
-        if (s.layout) setCustLayout(s.layout.toLowerCase() === "normal" || s.layout.toLowerCase() === "full" ? "FULL" : "SLIM BAR");
+        if (s.layout) setCustLayout({ normal: "FULL", full: "FULL", mini: "MINI", compact: "COMPACT" }[s.layout.toLowerCase()] || "SLIM BAR");
       } catch (_) {}
     }
     function boot() {

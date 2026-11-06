@@ -946,9 +946,7 @@ body.layout-mini .p-stat {
   font-size: 9px;
 }
 
-/* 4. ULTRA-COMPACT (Scorebar Only - Absolute maximum video visibility, height ~30px) */
-body.layout-compact .card-header,
-body.layout-compact .player-bar,
+/* 4. ULTRA-COMPACT (all fields, single score+player row; refined further below) */
 body.layout-compact .announcement-overlay {
   display: none !important;
 }
@@ -1021,6 +1019,142 @@ body.layout-sonyliv .bowler-row { flex-wrap: nowrap; }
 body.layout-sonyliv .bowler-figures span:nth-child(2),
 body.layout-sonyliv .bowler-figures span:nth-child(5) { display: none; }
 body.layout-sonyliv .player-bar { gap: 14px; }
+
+/* =========================================================
+   MINI & COMPACT — every field, smaller text, no "This Over"
+   MINI    = ribbon + score row + one-line player row
+   COMPACT = ribbon + a single row (teams, score, equation, batters, bowler)
+   ========================================================= */
+body.layout-mini #thisOverBox,
+body.layout-compact #thisOverBox,
+body.layout-mini #bowlerBox + .v-divider,
+body.layout-compact #bowlerBox + .v-divider,
+body.layout-mini .team-badge-tag,
+body.layout-compact .team-badge-tag,
+body.layout-mini .col-lbl,
+body.layout-compact .col-lbl { display: none !important; }
+
+/* Full team names — only very long names get an ellipsis */
+body.layout-mini .team-name,
+body.layout-compact .team-name {
+  max-width: 240px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+}
+
+/* Shared tiny ribbon */
+body.layout-mini .card-header,
+body.layout-compact .card-header {
+  display: flex;
+  flex-basis: 100%;
+  min-height: 14px;
+  padding: 1px 8px;
+  font-size: 8px;
+  background: rgba(3, 7, 16, 0.92);
+}
+body.layout-mini .hdr-title, body.layout-compact .hdr-title { font-size: 8.5px; }
+body.layout-mini .hdr-venue, body.layout-compact .hdr-venue { font-size: 8px; }
+body.layout-mini .sponsor-badge, body.layout-compact .sponsor-badge { font-size: 8px; }
+body.layout-mini .innings-pill, body.layout-compact .innings-pill { font-size: 7.5px; padding: 0 5px; }
+body.layout-mini .live-pill, body.layout-compact .live-pill { font-size: 7px; }
+
+/* Shared score pieces */
+body.layout-mini .team-logo-wrap,
+body.layout-compact .team-logo-wrap { width: 18px; height: 18px; border-radius: 5px; }
+body.layout-mini .team-logo,
+body.layout-compact .team-logo { font-size: 11px; }
+body.layout-mini .center-score-hub,
+body.layout-compact .center-score-hub {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  min-width: auto;
+  max-width: none;
+}
+body.layout-mini .score-row, body.layout-compact .score-row { gap: 4px; }
+body.layout-mini .hero-runs-wkts, body.layout-compact .hero-runs-wkts { font-size: 17px; }
+body.layout-mini .hero-overs, body.layout-compact .hero-overs { font-size: 9.5px; }
+body.layout-mini .equation-row,
+body.layout-compact .equation-row { margin-top: 0; flex-wrap: nowrap; gap: 4px; }
+body.layout-mini .equation-pill,
+body.layout-compact .equation-pill { font-size: 8.5px; padding: 1px 5px; border-radius: 4px; }
+body.layout-mini .equation-pill small,
+body.layout-compact .equation-pill small { font-size: 7.5px; }
+
+/* Shared player pieces: both batters on one line */
+body.layout-mini .batters-col,
+body.layout-compact .batters-col { flex-direction: row; gap: 12px; padding-right: 0; flex: 0 1 auto; }
+body.layout-mini .player-entry,
+body.layout-compact .player-entry { gap: 4px; font-size: 9.5px; }
+body.layout-mini .p-name,
+body.layout-compact .p-name { font-size: 9.5px; max-width: 110px; }
+body.layout-mini .p-runs, body.layout-compact .p-runs { font-size: 9.5px; }
+body.layout-mini .p-runs small, body.layout-compact .p-runs small { font-size: 8px; }
+body.layout-mini .p-stat, body.layout-compact .p-stat { font-size: 8px; }
+body.layout-mini .strike-arrow, body.layout-compact .strike-arrow { width: 8px; font-size: 8px; }
+body.layout-mini .bowler-col,
+body.layout-compact .bowler-col { padding: 0; flex: 0 1 auto; }
+body.layout-mini .bowler-row,
+body.layout-compact .bowler-row { flex-wrap: nowrap; gap: 5px; }
+body.layout-mini .bowler-name,
+body.layout-compact .bowler-name { font-size: 9.5px; max-width: 110px; }
+body.layout-mini .bowler-figures,
+body.layout-compact .bowler-figures { font-size: 9px; gap: 4px; }
+body.layout-mini .bowler-figures small,
+body.layout-compact .bowler-figures small { font-size: 7px; }
+body.layout-mini .v-divider, body.layout-compact .v-divider { height: 14px; }
+
+/* MINI: three slim tiers */
+body.layout-mini .main-score-bar {
+  grid-template-columns: minmax(150px, 1fr) auto minmax(150px, 1fr);
+  min-height: 26px;
+  padding: 1px 6px;
+}
+body.layout-mini .team-side { padding: 1px 8px; gap: 6px; }
+body.layout-mini .center-score-hub { padding: 1px 10px; }
+body.layout-mini .player-bar {
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 18px;
+  padding: 1px 12px;
+}
+
+/* COMPACT: ribbon + one row */
+body.layout-compact .broadcast-card {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  border-radius: 6px;
+}
+body.layout-compact .main-score-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 26px;
+  padding: 1px 8px;
+  background: transparent;
+  border-radius: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+body.layout-compact .team-side { padding: 0; gap: 5px; background: none; }
+body.layout-compact .team-accent-bar { display: none; }
+body.layout-compact .center-score-hub { padding: 0 2px; background: transparent; border: none; }
+body.layout-compact .player-bar {
+  flex: 1;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 26px;
+  padding: 1px 10px;
+  background: transparent;
+  border-top: none;
+  min-width: 0;
+}
+body.layout-compact #statTarget { display: none !important; } /* chase pill carries it */
+body.layout-compact .p-stat { display: none; }
+body.layout-compact .bowler-figures span:nth-child(2),
+body.layout-compact .bowler-figures span:nth-child(5) { display: none; }
 
 /* Sponsor appears only in the top ribbon */
 .sponsor-pill, #oSponsorPill { display: none !important; }
@@ -1646,7 +1780,7 @@ function startSponsorRotation() {
 // OVERLAY SIZE & POSITION CONTROLS
 // =========================================================
 // Each layout is designed at a fixed pixel width, then scaled to the video frame.
-const DESIGN_WIDTHS = { sonyliv: 980, hotstar: 920, mini: 920, compact: 640, normal: 860 };
+const DESIGN_WIDTHS = { sonyliv: 980, hotstar: 920, mini: 900, compact: 1040, normal: 860 };
 const DEFAULT_SCALE = 0.7; // overlay width as a fraction of the video frame width
 let activeLayoutKey = "sonyliv";
 let userScale = DEFAULT_SCALE;
