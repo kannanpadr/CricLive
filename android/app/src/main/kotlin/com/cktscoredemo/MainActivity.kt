@@ -539,6 +539,7 @@ fun CktAppScreen(
                                     return if (level >= 0 && scale > 0) (level * 100 / scale) else 100
                                 }
                             }, "AndroidScoreBridge")
+                            addJavascriptInterface(NativeVoice.Bridge(context), "AndroidVoice")
 
                             webChromeClient = object : WebChromeClient() {
                                 override fun onProgressChanged(view: WebView?, newProgress: Int) {

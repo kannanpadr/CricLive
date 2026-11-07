@@ -471,6 +471,7 @@ fun CameraStreamOverlayScreen(
                                 Handler(Looper.getMainLooper()).post { onBackToControl() }
                             }
                         }, "AndroidScoreBridge")
+                        addJavascriptInterface(NativeVoice.Bridge(ctx), "AndroidVoice")
                         webChromeClient = object : WebChromeClient() {
                             override fun onPermissionRequest(request: PermissionRequest?) {
                                 request?.grant(request.resources)

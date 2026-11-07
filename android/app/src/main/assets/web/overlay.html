@@ -1751,6 +1751,7 @@ body.pos-top .commentary-bar { order: 2; margin: 4px 0 0; }
 
 <script src="js/event-fx.js"></script>
 <script src="js/scorecard-tracker.js"></script>
+<script src="js/commentary-voice.js"></script>
 <script>
 // =========================================================
 // CRICHEROES LIVE STATE & DEFAULTS
@@ -1983,6 +1984,7 @@ function render(data = current) {
   if (window.ScoreTracker) window.ScoreTracker.ingest(s);
   checkOverEnd(s);
   renderCommentary(s);
+  if (window.CommentaryVoice) window.CommentaryVoice.observe(s);
 }
 
 // =========================================================
@@ -2188,7 +2190,9 @@ function applySettings(cfg) {
   // Over-end scorecards & commentary
   if (cfg.overEndCards !== undefined) cardCfg.overEnd = cfg.overEndCards !== false;
   if (cfg.overEndSeconds) cardCfg.seconds = Number(cfg.overEndSeconds) || 7;
-  if (cfg.commentaryTicker !== undefined) { cardCfg.commentary = cfg.commentaryTicker !== false; renderCommentary(current); }
+  // Commentary: "voice" (spoken, default), "text" (ticker), "both" or "off"
+  if (cfg.commentaryMode) { cardCfg.commentary = cfg.commentaryMode === "text" || cfg.commentaryMode === "both"; renderCommentary(current); }
+  if (window.CommentaryVoice) window.CommentaryVoice.applySettings(cfg);
 
   // Event graphics & sound
   if (cfg.fxGraphics !== undefined) fxCfg.graphics = cfg.fxGraphics !== false;
@@ -2424,7 +2428,9 @@ function showEvent(ev) {
 // =========================================================
 // OVER-END SCORECARDS (batting + bowling) & LIVE COMMENTARY
 // =========================================================
-const cardCfg = { overEnd: true, seconds: 7, commentary: true };
+const cardCfg = { overEnd: true, seconds: 7, commentary: false };
+// Spoken commentary waits for boundary / wicket stingers to finish
+if (window.CommentaryVoice) window.CommentaryVoice.attach({ role: "overlay", busy: () => fxBusy || fxQueue.length > 0 });
 let prevOverInt = null;
 let prevOverKey = "";
 let cardTimer = null;

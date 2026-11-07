@@ -2440,7 +2440,31 @@
                 <p class="muted" style="font-size:11.5px;margin:0 0 8px">At the end of every over the overlay shows the full <b>batting card</b>, then the full <b>bowling card</b>. With 4G CricHeroes sync the complete CricHeroes scorecard (with dismissals) is used; with manual scoring the card is built from the balls you score.</p>
                 <div class="toggle-row"><span>Show scorecards at end of each over</span><input class="switch" id="ocEnabled" type="checkbox" checked onchange="saveOverCardSettings()"></div>
                 <div class="toggle-row"><span>Seconds per card</span><input type="number" id="ocSeconds" min="3" max="30" value="7" style="max-width:80px" onchange="saveOverCardSettings()"></div>
-                <div class="toggle-row"><span>Live commentary ticker</span><input class="switch" id="ocCommentary" type="checkbox" checked onchange="saveOverCardSettings()"></div>
+                <div class="cust-section-title" style="margin-top:12px">🎙 Commentary</div>
+                <p class="muted" style="font-size:11px;margin:0 0 6px">Each new ball from CricHeroes (or from manual scoring) is read out by the phone's voice. In the app it plays on the phone speaker; on a computer it plays through the browser of this control panel.</p>
+                <div class="toggle-row"><span>Commentary</span>
+                  <select id="ocMode" onchange="saveOverCardSettings()" style="max-width:170px">
+                    <option value="voice">🔊 Voice only</option>
+                    <option value="both">🔊 Voice + text ticker</option>
+                    <option value="text">Text ticker only</option>
+                    <option value="off">Off</option>
+                  </select></div>
+                <div class="toggle-row"><span>Voice accent</span>
+                  <select id="ocVoiceLang" onchange="saveOverCardSettings()" style="max-width:170px">
+                    <option value="en-IN">English (India)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="en-AU">English (Australia)</option>
+                    <option value="en-US">English (US)</option>
+                  </select></div>
+                <div class="toggle-row"><span>Speed (<b id="ocVoiceRateVal">1.0×</b>)</span><input type="range" id="ocVoiceRate" min="70" max="150" value="100" style="max-width:160px" oninput="saveOverCardSettings(true)"></div>
+                <div class="toggle-row"><span>Voice volume (<b id="ocVoiceVolVal">100%</b>)</span><input type="range" id="ocVoiceVol" min="0" max="100" value="100" style="max-width:160px" oninput="saveOverCardSettings(true)"></div>
+                <div class="toggle-row"><span>Read the full description (not just "Bowler to Batter, FOUR")</span><input class="switch" id="ocVoiceDetail" type="checkbox" checked onchange="saveOverCardSettings()"></div>
+                <div class="toggle-row"><span>Score summary at end of each over</span><input class="switch" id="ocVoiceOver" type="checkbox" checked onchange="saveOverCardSettings()"></div>
+                <div class="btnrow" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+                  <button type="button" onclick="testVoice()">🔊 Test voice</button>
+                  <button type="button" onclick="window.CommentaryVoice && CommentaryVoice.stop()">■ Stop</button>
+                </div>
+                <div class="muted" id="ocVoiceEngine" style="font-size:11px;margin-top:6px"></div>
                 <div class="btnrow" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
                   <button type="button" onclick="showCardNow('batting')">▶ Show Batting Card</button>
                   <button type="button" onclick="showCardNow('bowling')">▶ Show Bowling Card</button>
@@ -2508,6 +2532,7 @@
 
   <script src="js/event-fx.js"></script>
   <script src="js/scorecard-tracker.js"></script>
+  <script src="js/commentary-voice.js"></script>
   <script>
     const $ = id => document.getElementById(id);
 
@@ -2594,6 +2619,7 @@
     // =========================================================
     function render(data = current) {
       current = { ...current, ...data };
+      if (window.CommentaryVoice) window.CommentaryVoice.observe(current);
       const s = current;
 
       // 1. Runs / Wickets & Overs
@@ -3134,15 +3160,28 @@
     // Overlay settings are written by several screens; always merge so one screen
     // never wipes another's options (colours, show/hide, size...).
     // ---------- Over-end scorecards & commentary ----------
-    function saveOverCardSettings() {
+    function saveOverCardSettings(quiet) {
       const secs = Math.max(3, Math.min(30, parseInt($("ocSeconds")?.value || "7", 10) || 7));
       if ($("ocSeconds")) $("ocSeconds").value = secs;
+      const mode = $("ocMode")?.value || "voice";
+      const rate = Number($("ocVoiceRate")?.value || 100) / 100;
+      const vol = Number($("ocVoiceVol")?.value ?? 100) / 100;
+      setText("ocVoiceRateVal", rate.toFixed(1) + "×");
+      setText("ocVoiceVolVal", Math.round(vol * 100) + "%");
       const cfg = {
         overEndCards: $("ocEnabled") ? $("ocEnabled").checked : true,
         overEndSeconds: secs,
-        commentaryTicker: $("ocCommentary") ? $("ocCommentary").checked : true
+        commentaryMode: mode,
+        commentaryTicker: mode === "text" || mode === "both",
+        voiceLang: $("ocVoiceLang")?.value || "en-IN",
+        voiceRate: rate,
+        voiceVolume: vol,
+        voiceDetail: $("ocVoiceDetail") ? $("ocVoiceDetail").checked : true,
+        voiceOverSummary: $("ocVoiceOver") ? $("ocVoiceOver").checked : true
       };
       persistOverlaySettings(cfg);
+      if (window.CommentaryVoice) window.CommentaryVoice.applySettings(cfg);
+      if (quiet === true) return;
       fetch("/api/overlay-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
@@ -3156,8 +3195,22 @@
         const s = JSON.parse(localStorage.getItem("chOverlaySettings") || "{}") || {};
         if (s.overEndCards !== undefined && $("ocEnabled")) $("ocEnabled").checked = s.overEndCards !== false;
         if (s.overEndSeconds && $("ocSeconds")) $("ocSeconds").value = s.overEndSeconds;
-        if (s.commentaryTicker !== undefined && $("ocCommentary")) $("ocCommentary").checked = s.commentaryTicker !== false;
+        if ($("ocMode")) $("ocMode").value = s.commentaryMode || "voice";
+        if (s.voiceLang && $("ocVoiceLang")) $("ocVoiceLang").value = s.voiceLang;
+        if (s.voiceRate && $("ocVoiceRate")) $("ocVoiceRate").value = Math.round(s.voiceRate * 100);
+        if (s.voiceVolume !== undefined && $("ocVoiceVol")) $("ocVoiceVol").value = Math.round(s.voiceVolume * 100);
+        if (s.voiceDetail !== undefined && $("ocVoiceDetail")) $("ocVoiceDetail").checked = s.voiceDetail !== false;
+        if (s.voiceOverSummary !== undefined && $("ocVoiceOver")) $("ocVoiceOver").checked = s.voiceOverSummary !== false;
       } catch (_) {}
+      setText("ocVoiceRateVal", (Number($("ocVoiceRate")?.value || 100) / 100).toFixed(1) + "×");
+      setText("ocVoiceVolVal", ($("ocVoiceVol")?.value ?? 100) + "%");
+      if (window.CommentaryVoice) {
+        window.CommentaryVoice.attach({ role: "control", busy: () => Date.now() - (window.__lastFxAt || 0) < 4800 });
+        const eng = window.CommentaryVoice.engine();
+        setText("ocVoiceEngine", eng === "phone" ? "Voice: phone Text-to-Speech"
+          : eng === "browser" ? "Voice: this browser's speech engine (OBS captures it with Desktop Audio)"
+          : "Voice is not supported on this device / browser.");
+      }
       updateCardSourceNote();
     }
 
@@ -3167,6 +3220,14 @@
       $("ocSource").textContent = c.source === "cricheroes"
         ? `Source: CricHeroes full scorecard · ${c.batting.length} batters, ${c.bowling.length} bowlers`
         : `Source: built from scored balls · ${c.batting.length} batters, ${c.bowling.length} bowlers`;
+    }
+
+    function testVoice() {
+      if (!window.CommentaryVoice) return;
+      saveOverCardSettings(true);
+      if (!window.CommentaryVoice.available()) { toast("Voice is not supported here.", "warning"); return; }
+      const line = window.CommentaryVoice.test();
+      toast("🔊 " + line);
     }
 
     function showCardNow(kind) {
@@ -3205,6 +3266,7 @@
       if (!cfg.fxSound || !$("fxPlayHere")?.checked || !window.EventFx) return;
       window.EventFx.setVolume(cfg.fxVolume);
       window.EventFx.play(type);
+      window.__lastFxAt = Date.now();
     }
 
     function saveFxSettings() {
@@ -3381,6 +3443,7 @@
       if (!x || typeof x !== "object") return;
       if (x.fullScorecard && Array.isArray(x.fullScorecard.innings)) current.fullScorecard = x.fullScorecard;
       if (Array.isArray(x.commentary) && x.commentary.length) current.commentary = x.commentary;
+      if (window.CommentaryVoice) window.CommentaryVoice.observe(current);
       try {
         localStorage.setItem("chCurrentScore", JSON.stringify(current));
         if (broadcastSyncChannel) broadcastSyncChannel.postMessage({ type: 'STATE_UPDATE', payload: current });
